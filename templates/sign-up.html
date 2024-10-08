@@ -85,6 +85,14 @@
 
 	<!-- Axios 추가 -->
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
+
+	<style>
+		.error-message {
+			color: red;
+			font-size: 0.8em;
+			margin-top: 5px;
+		}
+	</style>
 </head>
 
 <body>
@@ -92,68 +100,70 @@
 <!-- **************** MAIN CONTENT START **************** -->
 <main>
   
-  <!-- Container START -->
-  <div class="container">
-    <div class="row justify-content-center align-items-center vh-100 py-5">
-      <!-- Main content START -->
-      <div class="col-sm-10 col-md-8 col-lg-7 col-xl-6 col-xxl-5">
-        <!-- Sign up START -->
-        <div class="card card-body rounded-3 p-4 p-sm-5">
-          <div class="text-center">
-            <!-- Title -->
-            <h1 class="mb-2">회원가입</h1>
-            <span class="d-block">계정이 이미 있으신가요? <a href="sign-in.html">여기</a>를 눌러 로그인하기</span>
-          </div>
-          <!-- Form START -->
-          <form class="mt-4" id="signupForm">
-            <!-- Username -->
-            <div class="mb-3 input-group-lg">
-              <input type="text" class="form-control" id="username" name="username" placeholder="Enter username" required>
-            </div>
-            <!-- Email -->
-            <div class="mb-3 input-group-lg">
-              <input type="email" class="form-control" id="email" name="email" placeholder="Enter email" required>
-            </div>
-            <!-- Password -->
-            <div class="mb-3 position-relative">
-              <div class="input-group input-group-lg">
-                <input class="form-control" type="password" id="password" name="password" placeholder="Enter password" required>
-                <span class="input-group-text p-0">
-                  <i class="fakepasswordicon fa-solid fa-eye-slash cursor-pointer p-2 w-40px"></i>
-                </span>
-              </div>
-              <!-- Pswmeter -->
-              <div id="pswmeter" class="mt-2"></div>
-              <div class="d-flex mt-1">
-                <div id="pswmeter-message" class="rounded"></div>
-                <div class="ms-auto">
-                  <i class="bi bi-info-circle ps-1" data-bs-container="body" data-bs-toggle="popover" data-bs-placement="top" data-bs-content="Include at least one uppercase, one lowercase, one special character, one number and 8 characters long." data-bs-original-title="" title=""></i>
-                </div>
-              </div>
-            </div>
-            <!-- Bio -->
-            <div class="mb-3 input-group-lg">
-              <textarea class="form-control" id="bio" name="bio" placeholder="Enter bio (optional)"></textarea>
-            </div>
-            <!-- Profile Image -->
-			<small>프로필 사진</small>
-            <div class="mb-3 input-group-lg">
-              <input type="file" class="form-control" id="profile_image" name="profile_image" accept="image/*">
-            </div>
-            <!-- Button -->
-            <div class="d-grid"><button type="submit" class="btn btn-lg btn-primary">회원가입하기</button></div>
-            <!-- Copyright -->
-            <p class="mb-0 mt-3">©2024 <a target="_blank" href="https://www.webestica.com/">Webestica.</a> All rights reserved</p>
-          </form>
-          <!-- Form END -->
-        </div>
-        <!-- Sign up END -->
-      </div>
-    </div> <!-- Row END -->
-  </div>
-  <!-- Container END -->
-
-</main>
+	<!-- Container START -->
+	<div class="container">
+	  <div class="row justify-content-center align-items-center vh-100 py-5">
+		<!-- Main content START -->
+		<div class="col-sm-10 col-md-8 col-lg-7 col-xl-6 col-xxl-5">
+		  <!-- Sign up START -->
+		  <div class="card card-body rounded-3 p-4 p-sm-5">
+			<div class="text-center">
+			  <!-- Title -->
+			  <h1 class="mb-2">회원가입</h1>
+			  <span class="d-block">계정이 이미 있으신가요? <a href="sign-in.html">여기</a>를 눌러 로그인하기</span>
+			</div>
+			<!-- Form START -->
+			<form class="mt-4" id="signupForm">
+			  <!-- Username -->
+			  <div class="mb-3 input-group-lg">
+				<input type="text" class="form-control" id="username" name="username" placeholder="유저 이름" required>
+				<div id="usernameError" class="error-message"></div>
+			  </div>
+			  <!-- Email -->
+			  <div class="mb-3 input-group-lg">
+				<input type="email" class="form-control" id="email" name="email" placeholder="이메일" required>
+				<div id="emailError" class="error-message"></div>
+			  </div>
+			  <!-- Password -->
+			  <div class="mb-3 position-relative">
+				<div class="input-group input-group-lg">
+				  <input class="form-control" type="password" id="password" name="password" placeholder="비밀번호" required>
+				</div>
+				<div id="passwordError" class="error-message"></div>
+				<!-- Pswmeter -->
+				<div id="pswmeter" class="mt-2"></div>
+				<div class="d-flex mt-1">
+				  <div id="pswmeter-message" class="rounded"></div>
+				  <div class="ms-auto">
+					<i class="bi bi-info-circle ps-1" data-bs-container="body" data-bs-toggle="popover" data-bs-placement="top" data-bs-content="1. 최소 8자 이상 2. 너무 흔한 비밀번호(예: 'password', '12345678' 등)는 사용할 수 없습니다. 3. 비밀번호는 숫자만으로 구성될 수 없습니다. 4. 비밀번호가 사용자의 개인 정보(예: 사용자 이름, 이메일 등)와 너무 유사하면 안 됩니다." data-bs-original-title="" title=""></i>
+				  </div>
+				</div>
+			  </div>
+			  <!-- Bio -->
+			  <div class="mb-3 input-group-lg">
+				<textarea class="form-control" id="bio" name="bio" placeholder="자기소개(선택사항)"></textarea>
+				<div id="bioError" class="error-message"></div>
+			  </div>
+			  <!-- Profile Image -->
+			  <small>프로필 사진</small>
+			  <div class="mb-3 input-group-lg">
+				<input type="file" class="form-control" id="profile_image" name="profile_image" accept="image/*">
+				<div id="profileImageError" class="error-message"></div>
+			  </div>
+			  <!-- Button -->
+			  <div class="d-grid"><button type="submit" class="btn btn-lg btn-primary">회원가입하기</button></div>
+			  <!-- Copyright -->
+			  <p class="mb-0 mt-3">©2024 <a target="_blank" href="https://www.webestica.com/">Webestica.</a> All rights reserved</p>
+			</form>
+			<!-- Form END -->
+		  </div>
+		  <!-- Sign up END -->
+		</div>
+	  </div> <!-- Row END -->
+	</div>
+	<!-- Container END -->
+  
+  </main>
 
 <!-- **************** MAIN CONTENT END **************** -->
 
@@ -174,6 +184,9 @@ JS libraries, plugins and custom scripts -->
 	document.getElementById('signupForm').addEventListener('submit', async function(e) {
 		e.preventDefault();
 		
+		// 에러 메시지 초기화
+		document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
+		
 		const formData = new FormData(this);
 		
 		try {
@@ -187,7 +200,19 @@ JS libraries, plugins and custom scripts -->
 			window.location.href = 'sign-in.html';
 		} catch (error) {
 			console.error('회원가입 실패:', error.response.data);
-			alert('회원가입에 실패했습니다. 다시 시도해주세요.');
+			if (error.response && error.response.data) {
+				Object.keys(error.response.data).forEach(key => {
+					const errorElement = document.getElementById(key + 'Error');
+					if (errorElement) {
+						errorElement.textContent = error.response.data[key].join(' ');
+					}
+				});
+				if (error.response.data.non_field_errors) {
+					alert(error.response.data.non_field_errors.join(' '));
+				}
+			} else {
+				alert('회원가입에 실패했습니다. 다시 시도해주세요.');
+			}
 		}
 	});
 </script>
