@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+	<title>내 프로필</title>
+
+	<!-- Meta Tags -->
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<meta name="author" content="Webestica.com">
+	<meta name="description" content="Bootstrap 5 based Social Media Network and Community Theme">
+
+	<!-- Dark mode -->
+	<script>
+		const storedTheme = localStorage.getItem('theme')
+ 
+		const getPreferredTheme = () => {
+			if (storedTheme) {
+				return storedTheme
+			}
+			return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'light'
+		}
+
+		const setTheme = function (theme) {
+			if (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+				document.documentElement.setAttribute('data-bs-theme', 'dark')
+			} else {
+				document.documentElement.setAttribute('data-bs-theme', theme)
+			}
+		}
+
+		setTheme(getPreferredTheme())
+
+		window.addEventListener('DOMContentLoaded', () => {
+		    var el = document.querySelector('.theme-icon-active');
+			if(el != 'undefined' && el != null) {
+				const showActiveTheme = theme => {
+				const activeThemeIcon = document.querySelector('.theme-icon-active use')
+				const btnToActive = document.querySelector(`[data-bs-theme-value="${theme}"]`)
+				const svgOfActiveBtn = btnToActive.querySelector('.mode-switch use').getAttribute('href')
+
+				document.querySelectorAll('[data-bs-theme-value]').forEach(element => {
+					element.classList.remove('active')
+				})
+
+				btnToActive.classList.add('active')
+				activeThemeIcon.setAttribute('href', svgOfActiveBtn)
+			}
+
+			window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+				if (storedTheme !== 'light' || storedTheme !== 'dark') {
+					setTheme(getPreferredTheme())
+				}
+			})
+
+			showActiveTheme(getPreferredTheme())
+
+			document.querySelectorAll('[data-bs-theme-value]')
+				.forEach(toggle => {
+					toggle.addEventListener('click', () => {
+						const theme = toggle.getAttribute('data-bs-theme-value')
+						localStorage.setItem('theme', theme)
+						setTheme(theme)
+						showActiveTheme(theme)
+					})
+				})
+
+			}
+		})
+		
+	</script>
+
+	<!-- Favicon -->
+	<link rel="shortcut icon" href="assets/images/favicon.ico">
+
+	<!-- Google Font -->
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+
+	<!-- Plugins CSS -->
+	<link rel="stylesheet" type="text/css" href="assets/vendor/font-awesome/css/all.min.css">
+	<link rel="stylesheet" type="text/css" href="assets/vendor/bootstrap-icons/bootstrap-icons.css">
+  <link rel="stylesheet" type="text/css" href="assets/vendor/dropzone/dist/dropzone.css">
+  <link rel="stylesheet" type="text/css" href="assets/vendor/glightbox-master/dist/css/glightbox.min.css">
+  <link rel="stylesheet" type="text/css" href="assets/vendor/choices.js/public/assets/styles/choices.min.css">
+  <link rel="stylesheet" type="text/css" href="assets/vendor/flatpickr/dist/flatpickr.min.css">
+
+	<!-- Theme CSS -->
+	<link rel="stylesheet" type="text/css" href="assets/css/style.css">
+	 
+</head>
+
+<body>
+
+<!-- =======================
+Header START -->
+<header class="navbar-light fixed-top header-static bg-mode">
+
+	<!-- Logo Nav START -->
+	<nav class="navbar navbar-expand-lg">
+		<div class="container">
+			<!-- Logo START -->
+			<a class="navbar-brand" href="index.html"> <!-- 홈 화면 연결 -->
+        <img class="light-mode-item navbar-brand-item" src="assets/images/logo.svg" alt="logo">
+				<img class="dark-mode-item navbar-brand-item" src="assets/images/logo.svg" alt="logo">
+			</a>
+			<!-- Logo END -->
+
+			<!-- Responsive navbar toggler -->
+			<button class="navbar-toggler ms-auto icon-md btn btn-light p-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-animation">
+          <span></span>
+          <span></span>
+          <span></span>
+        </span>
+      </button>
+
+			<!-- Main navbar START -->
+			<div class="collapse navbar-collapse" id="navbarCollapse">
+
+      <!-- Nav Search START -->
+      <div class="nav mt-3 mt-lg-0 flex-nowrap align-items-center px-4 px-lg-0">
+        <div class="nav-item w-100">
+          <form class="rounded position-relative" id="searchForm">
+            <input class="form-control ps-5 bg-light" type="search" placeholder="사용자 검색" aria-label="Search" id="searchInput"> <!-- search 기능 연결 -->
+            <button class="btn bg-transparent px-2 py-0 position-absolute top-50 start-0 translate-middle-y" type="submit"><i class="bi bi-search fs-5"> </i></button>
+          </form>
+          <div id="searchResults" class="position-absolute bg-white border rounded shadow-sm" style="display: none; z-index: 1000; width: 100%;"></div>
+        </div>
+      </div>
+      <!-- Nav Search END -->
+
+				<ul class="navbar-nav navbar-nav-scroll ms-auto">
+					<!-- Nav Pages START -->
+					<li class="nav-item dropdown">
+						<a class="nav-link dropdown-toggle" href="#" id="homeMenu" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Pages</a>
+						<ul class="dropdown-menu" aria-labelledby="homeMenu">
+							<li> <a class="dropdown-item" href="index.html">Post</a></li> <!-- 홈 화면 연결 -->
+							<li> <a class="dropdown-item" href="landing.html">Market</a></li> <!-- 마켓 화면 연결 -->
+              <li class="dropdown-divider"></li>
+						</ul>
+					</li>
+			<!-- Nav right START -->
+			<ul class="nav flex-nowrap align-items-center ms-sm-3 list-unstyled">
+				<li class="nav-item ms-2">
+					<a class="nav-link bg-light icon-md btn btn-light p-0" href="messaging.html"> <!-- 메세지 연결 -->
+						<i class="bi bi-chat-left-text-fill fs-6"> </i>
+					</a>
+				</li>
+        <li class="nav-item dropdown ms-2">
+					<a class="nav-link bg-light icon-md btn btn-light p-0" href="#" id="notifDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
+            <span class="badge-notif animation-blink"></span>
+						<i class="bi bi-bell-fill fs-6"> </i>
+					</a>
+          <div class="dropdown-menu dropdown-animation dropdown-menu-end dropdown-menu-size-md p-0 shadow-lg border-0" aria-labelledby="notifDropdown">
+            <div class="card">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="m-0">알림 <span class="badge bg-danger bg-opacity-10 text-danger ms-2">4 new</span></h6>
+                <a class="small" href="#">Clear all</a>
+              </div>
+              <div class="card-footer text-center">
+                <a href="#" class="btn btn-sm btn-primary-soft">See all incoming activity</a>
+              </div>
+            </div>
+          </div>
+				</li>
+        <!-- Notification dropdown END -->
+
+        <li class="nav-item ms-2 dropdown">
+					<a class="nav-link btn icon-md p-0" href="#" id="profileDropdown" role="button" data-bs-auto-close="outside" data-bs-display="static" data-bs-toggle="dropdown" aria-expanded="false">
+						<img class="avatar-img rounded-2" src="assets/images/avatar/07.jpg" alt="">
+					</a>
+          <ul class="dropdown-menu dropdown-animation dropdown-menu-end pt-3 small me-md-n3" aria-labelledby="profileDropdown">
+            <!-- Profile info -->
+            <li class="px-3">
+              <div class="d-flex align-items-center position-relative">
+                <!-- Avatar -->
+                <div class="avatar me-3">
+                  <img class="avatar-img rounded-circle" src="assets/images/avatar/07.jpg" alt="avatar">
+                </div>
+                <div>
+                  <a class="h6 stretched-link" id="userName"></a>
+                  <p class="small m-0" id="userEmail"></p>
+                </div>
+              </div>
+              <li class="dropdown-divider"></li>
+            <li><a class="dropdown-item bg-danger-soft-hover" href="sign-in.html"><i class="bi bi-shield-lock fa-fw me-2"></i>프로필 Privacy 설정</a></li> 
+            <!-- 프로필 설정 -->
+            <li><a class="dropdown-item bg-danger-soft-hover" href="sign-in.html"><i class="bi bi-box-arrow-right fa-fw me-2"></i>로그아웃</a></li>  
+            <!-- 로그아웃 -->
+            <li><a class="dropdown-item bg-danger-soft-hover" href="sign-in.html"><i class="bi bi-person-dash fa-fw me-2"></i>계정 비활성화</a></li> 
+            <!-- 비활성화 -->
+            <li><a class="dropdown-item bg-danger-soft-hover" href="sign-in.html"><i class="bi bi-person-x fa-fw me-2"></i>계정 삭제하기</a></li> 
+            <!-- 삭제하기 -->
+            <li> <hr class="dropdown-divider"></li>
+          </ul>
+				</li>
+			  <!-- Profile END -->
+			</ul>
+			<!-- Nav right END -->
+		</div>
+	</nav>
+	<!-- Logo Nav END -->
+</header>
+<!-- Header END -->
+
+<!-- **************** MAIN CONTENT START **************** -->
+<main>
+  
+  <!-- Container START -->
+  <div class="container">
+    <div class="row g-4">
+      
+      <!-- My profile START -->
+      <div class="card" id="profile-card">
+        <!-- Cover image -->
+        <div class="h-200px rounded-top" style="background-image:url('/templates/images/profile-cover.png'); background-position: center; background-size: cover; background-repeat: no-repeat;"></div>
+        <!-- Card body START -->
+        <div class="card-body py-0">
+          <div class="d-sm-flex align-items-start text-center text-sm-start">
+            <div>
+              <!-- Avatar -->
+              <div class="avatar avatar-xxl mt-n5 mb-3">
+                <img class="avatar-img rounded-circle border border-white border-3" id="profile-image" alt="">
+              </div>
+            </div>
+            <div class="ms-sm-4 mt-sm-3">
+              <!-- Info -->
+              <h1 class="mb-0 h5" id="profile-username"><i class="bi bi-patch-check-fill text-success small"></i></h1>
+              <p>팔로워: <span id="profile-followers"></span></p>
+              <p>팔로잉: <span id="profile-following"></span></p>
+              <p id="userBio">소개: </p>
+              <!-- User info -->
+              <ul class="list-unstyled mt-3 mb-0">
+                <li> <i class="bi bi-envelope fa-fw pe-1"></i> Email: <strong id="userEmail"></strong> </li>
+              </ul>
+            </div>
+            <!-- Button -->
+            <div class="d-flex mt-3 justify-content-center ms-sm-auto">
+              <button class="btn btn-danger-soft me-2" type="button" href="sign-in.html" id="edit-profile-btn"> <i class="bi bi-pencil-fill pe-1"></i> 프로필 수정 </button> <!-- 프로필 수정으로 이동 -->
+            </div>
+          </div>
+        </div>
+        <!-- Card body END -->
+      </div>
+      <!-- My profile END -->
+      <div class="col-6">
+        <!-- Following Card START -->
+        <div class="col-md-6 col-lg-12">
+          <div class="card">
+            <!-- Card header START -->
+            <div class="card-header d-sm-flex justify-content-between align-items-center border-0">
+              <h5 class="card-title">Following <span id="followingCount" class="badge bg-danger bg-opacity-10 text-danger"></span></h5>
+              <a class="btn btn-primary-soft btn-sm" href="#!"> 팔로잉 목록</a> <!-- 팔로잉 목록 페이지 -->
+            </div>
+            <!-- Card header END -->
+            <!-- Card body START -->
+            <div class="card-body position-relative pt-0">
+              <div id="followingList" class="row g-3">
+                <!-- Following users will be dynamically inserted here -->
+              </div>
+            </div>
+            <!-- Card body END -->
+          </div>
+        </div>
+        <!-- Following Card END -->
+
+        <!-- Followers Card START -->
+        <div class="col-md-6 col-lg-12 mt-4">
+          <div class="card">
+            <!-- Card header START -->
+            <div class="card-header d-sm-flex justify-content-between align-items-center border-0">
+              <h5 class="card-title">Followers <span id="followerCount" class="badge bg-danger bg-opacity-10 text-danger"></span></h5>
+              <a class="btn btn-primary-soft btn-sm" href="#!"> 팔로워 목록</a>  <!-- 팔로워 목록 페이지 -->
+            </div>
+            <!-- Card header END -->
+            <!-- Card body START -->
+            <div class="card-body position-relative pt-0">
+              <div id="followerList" class="row g-3">
+                <!-- Followers will be dynamically inserted here -->
+              </div>
+            </div>
+            <!-- Card body END -->
+          </div>
+        </div>
+        <!-- Followers Card END -->
+      </div>
+      <!-- Right sidebar END -->
+
+    </div> <!-- Row END -->
+  </div>
+  <!-- Container END -->
+
+</main>
+<!-- **************** MAIN CONTENT END **************** -->
+
+
+<!-- **** JS libraries, plugins and custom scripts **** -->
+
+<!-- Bootstrap JS -->
+<script src="assets/vendor/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Vendors -->
+<script src="assets/vendor/dropzone/dist/dropzone.js"></script>
+<script src="assets/vendor/choices.js/public/assets/scripts/choices.min.js"></script>
+<script src="assets/vendor/glightbox-master/dist/js/glightbox.min.js"></script>
+<script src="assets/vendor/flatpickr/dist/flatpickr.min.js"></script>
+
+<!-- Theme Functions -->
+<script src="assets/js/functions.js"></script>
+
+<!-- Custom 유저 관련 api scripts -->
+<script src="/templates/my-profile.js"></script>
+
+</body>
+</html>
