@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>회원가입</title>
+</head>
+<body>
+    <div class="signup-container">
+        <h1>회원가입</h1>
+        <form id="signup-form">
+            <input type="text" id="username" name="username" placeholder="사용자명" required>
+            <input type="email" id="email" name="email" placeholder="이메일" required>
+            <input type="password" id="password" name="password" placeholder="비밀번호" required>
+            <input type="password" id="confirm_password" name="confirm_password" placeholder="비밀번호 확인" required>
+            <input type="text" id="bio" name="bio" placeholder="자기소개">
+            <input type="file" id="profile_image" name="profile_image" accept="image/*">
+            <div id="error-message"></div>
+            <button type="submit">가입하기</button>
+        </form>
+        <p>계정이 있으신가요? <a href="/templates/login.html">로그인하기</a></p>
+    </div>
+    <script src="signup.js"></script>
+</body>
+</html>
