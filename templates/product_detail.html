@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Detail</title>
+</head>
+<body>
+    <h1 id="product-name"></h1>
+
+    <div id="product-images"></div>
+    <p>작성자: <span id="product-username"></span></p>
+    <p>가격: <span id="product-price"></span>원</p>
+    <p>별점: <span id="product-rating"></span></p>
+    <p>제품 설명: <span id="product-description"></span></p>
+    <p>재고: <span id="product-stock"></span>개</p>
+    <p>품종: <span id="product-variety"></span></p>
+    <p>재배 지역: <span id="product-region"></span></p>
+    <p>재배 일자: <span id="product-harvest-date"></span></p>
+
+    <h3>리뷰 작성</h3>
+    <form id="review-form">
+        <textarea name="content" rows="4" cols="50" required></textarea><br>
+        <label for="rating">별점:</label>
+        <select name="rating" required>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+        </select><br>
+        <button type="submit">작성</button>
+    </form>
+
+    <h2>리뷰</h2>
+    <ul id="reviews-list"></ul>
+
+    <button onclick="window.location.href='./product_list.html';">목록으로 돌아가기</button>
+
+    <script>
+        const API_BASE_URL = "http://127.0.0.1:8000/";
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const productId = urlParams.get('id');
+
+            fetchProductDetail(productId);
+            fetchProductReviews(productId);
+
+            // 상품 상세 정보 가져오기
+            async function fetchProductDetail(productId) {
+                try {
+                    const response = await fetch(`${API_BASE_URL}market/products/${productId}/`);
+                    const product = await response.json();
+
+                    document.getElementById('product-name').innerText = product.name;
+                    document.getElementById('product-username').innerText = product.username;
+                    document.getElementById('product-price').innerText = product.price;
+                    document.getElementById('product-rating').innerText = product.average_rating;
+                    document.getElementById('product-description').innerText = product.description;
+                    document.getElementById('product-stock').innerText = product.stock;
+                    document.getElementById('product-variety').innerText = product.variety;
+                    document.getElementById('product-region').innerText = product.growing_region;
+                    document.getElementById('product-harvest-date').innerText = product.harvest_date;
+
+                    const imagesDiv = document.getElementById('product-images');
+                    product.images.forEach(image_url => {
+                        const img = document.createElement('img');
+                        img.src = image_url;
+                        img.alt = product.name;
+                        img.style.maxWidth = '100%';
+                        img.style.height = 'auto';
+                        imagesDiv.appendChild(img);
+                    });
+                } catch (error) {
+                    console.error('상품 정보 가져오기 오류:', error);
+                }
+            }
+
+            // 리뷰 정보 가져오기
+            async function fetchProductReviews(productId) {
+                try {
+                    const response = await fetch(`${API_BASE_URL}market/products/${productId}/`);
+                    const reviews = await response.json();
+                    console.log(reviews);
+                    const reviewsList = document.getElementById('reviews-list');
+
+                    reviews.forEach(review => {
+                        const li = document.createElement('li');
+                        li.id = `review-${review.id}`;
+                        li.innerHTML = `
+                            <p>작성자: ${review.user}</p>
+                            <p>별점: ${review.rating}</p>
+                            <p>${review.content}</p>
+                            <p>작성일: ${review.created_at}</p>
+                            <button class="delete-review-btn" data-review-id="${review.id}">삭제</button>
+                        `;
+                        reviewsList.appendChild(li);
+                    });
+
+                    // 리뷰 삭제 버튼 처리
+                    document.querySelectorAll('.delete-review-btn').forEach(button => {
+                        button.addEventListener('click', function() {
+                            const reviewId = this.getAttribute('data-review-id');
+                            deleteReview(productId, reviewId);
+                        });
+                    });
+                } catch (error) {
+                    console.error('리뷰 정보 가져오기 오류:', error);
+                }
+            }
+
+            // 리뷰 삭제 함수
+            async function deleteReview(productId, reviewId) {
+                try {
+                    const response = await fetch(`${API_BASE_URL}market/products/${productId}/reviews/${reviewId}/delete/`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRFToken': getCookie('csrftoken'),  // CSRF 토큰 추가 필요
+                        },
+                    });
+
+                    if (response.ok) {
+                        document.getElementById(`review-${reviewId}`).remove();
+                        alert('리뷰가 삭제되었습니다.');
+                    } else {
+                        throw new Error('리뷰 삭제 실패');
+                    }
+                } catch (error) {
+                    console.error('리뷰 삭제 오류:', error);
+                    alert('리뷰 삭제 중 오류가 발생했습니다.');
+                }
+            }
+
+            // CSRF 토큰 가져오기 (필요한 경우 사용)
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+        });
+    </script>
+</body>
+</html>
