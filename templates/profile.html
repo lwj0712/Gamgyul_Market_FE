@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>프로필</title>
+</head>
+<body>
+    <header>
+        <h1>프로필</h1>
+        <nav>
+            <a href="/templates/index.html">홈으로</a>
+            <a href="/templates/login.html" id="login-link" style="display: none;">로그인</a>
+            <button id="logout-btn" style="display: none;">로그아웃</button>
+        </nav>
+    </header>
+    <main>
+        <section id="profile-info">
+            <img id="profile-image" src="" alt="프로필 이미지">
+            <h2 id="username"></h2>
+            <p id="bio"></p>
+            <p>팔로워: <span id="followers-count"></span></p>
+            <p>팔로잉: <span id="following-count"></span></p>
+            <button id="follow-btn" style="display: none;">팔로우</button>
+        </section>
+        <section id="followers-list" style="display: none;">
+            <h3>팔로워 목록</h3>
+            <ul id="followers"></ul>
+        </section>
+        <section id="following-list" style="display: none;">
+            <h3>팔로잉 목록</h3>
+            <ul id="following"></ul>
+        </section>
+        <section id="products">
+            <h3>상품 목록</h3>
+            <ul id="product-list"></ul>
+        </section>
+    </main>
+    <script src="/templates/profile.js"></script>
+</body>
+</html>
