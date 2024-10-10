@@ -4,17 +4,88 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>프로필</title>
+    <style>
+        nav {
+            background-color: #f8f9fa;
+            padding: 10px;
+        }
+        nav a, nav button {
+            margin-right: 10px;
+        }
+        .user-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .profile-image {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        .username {
+            margin-right: 10px;
+        }
+        .chat-btn, .follow-btn, .unfollow-btn {
+            margin-left: 5px;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .follow-btn {
+            background-color: #3897f0;
+            color: white;
+        }
+        .unfollow-btn {
+            background-color: #ed4956;
+            color: white;
+        }
+        .search-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        #searchResults {
+            display: none;
+            position: absolute;
+            background-color: white;
+            border: 1px solid #ddd;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            width: 100%;
+        }
+        .search-result-item {
+            padding: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+        .search-result-item:hover {
+            background-color: #f0f0f0;
+        }
+        .search-result-item img {
+            margin-right: 10px;
+        }
+    </style>
 </head>
 <body>
     <header>
-        <h1>프로필</h1>
         <nav>
-            <a href="/templates/index.html">홈으로</a>
+            <a href="/templates/index.html">홈</a>
+            <a href="/templates/product_list.html">마켓</a>
+            <a href="/templates/chat.html">채팅</a>
+            <a href="/templates/alarm.html">알림</a>
             <a href="/templates/login.html" id="login-link" style="display: none;">로그인</a>
             <button id="logout-btn" style="display: none;">로그아웃</button>
         </nav>
     </header>
     <main>
+        <h1>프로필</h1>
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="사용자 검색...">
+            <div id="searchResults"></div>
+        </div>
         <section id="profile-info">
             <img id="profile-image" src="" alt="프로필 이미지">
             <h2 id="username"></h2>
@@ -22,6 +93,8 @@
             <p>팔로워: <span id="followers-count"></span></p>
             <p>팔로잉: <span id="following-count"></span></p>
             <button id="follow-btn" style="display: none;">팔로우</button>
+            <button id="edit-profile-btn">프로필 수정</button>
+            <button id="profile-settings-btn">프로필 설정</button>
         </section>
         <section id="followers-list" style="display: none;">
             <h3>팔로워 목록</h3>
@@ -33,7 +106,7 @@
         </section>
         <section id="products">
             <h3>상품 목록</h3>
-            <ul id="product-list"></ul>
+            <div id="product-list"></div>
         </section>
     </main>
     <script src="/templates/profile.js"></script>
