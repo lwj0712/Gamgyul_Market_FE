@@ -20,18 +20,18 @@ document.addEventListener('DOMContentLoaded', function() {
     
             if (response.ok) {
                 const userData = await response.json();
-                userInfo.style.display = 'block';
-                loginLink.style.display = 'none';
-                usernameSpan.textContent = userData.username;
-                profileLink.href = `/templates/profile.html?username=${userData.username}`;
+                if (userInfo) userInfo.style.display = 'block';
+                if (loginLink) loginLink.style.display = 'none';
+                if (usernameSpan) usernameSpan.textContent = userData.username;
+                if (profileLink) profileLink.href = `/templates/profile.html?username=${userData.username}`;
             } else {
-                userInfo.style.display = 'none';
-                loginLink.style.display = 'block';
+                if (userInfo) userInfo.style.display = 'none';
+                if (loginLink) loginLink.style.display = 'block';
             }
         } catch (error) {
             console.error('인증 확인 중 오류 발생:', error);
-            userInfo.style.display = 'none';
-            loginLink.style.display = 'block';
+            if (userInfo) userInfo.style.display = 'none';
+            if (loginLink) loginLink.style.display = 'block';
         }
         // 인증 상태와 관계없이 게시물을 로드합니다.
         loadPosts();
@@ -181,10 +181,8 @@ document.addEventListener('DOMContentLoaded', function() {
     async function init() {
         await checkAuth();
         loadPosts();
-        if (userInfo.style.display === 'block') {
+        if (userInfo && userInfo.style.display === 'block') {
             loadFriendRecommendations();
         }
     }
-
-    init();
 });
