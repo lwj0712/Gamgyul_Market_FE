@@ -138,7 +138,7 @@ function displayProductDetails(product) {
     document.getElementById('product-user-title').textContent = product.user_title;
     document.getElementById('product-timestamp').textContent = product.timestamp;
     document.getElementById('product-price').textContent = product.price;
-    document.getElementById('product-rating').textContent = product.average_rating;
+    document.getElementById('product-rating').textContent = product.average_rating.toFixed(1);
     document.getElementById('product-description').textContent = product.description;
     document.getElementById('product-stock').textContent = product.stock;
     document.getElementById('product-variety').textContent = product.variety;
@@ -168,7 +168,7 @@ function displayReviews(reviews) {
                 <div class="bg-light p-3 rounded">
                     <div class="d-flex justify-content-between">
                         <h6 class="mb-1">${review.user}</h6>
-                        <small>${review.timestamp}</small>
+                        <small>작성일 : ${review.created_at}</small>
                     </div>
                     <p class="mb-1">별점: ${review.rating}</p>
                     <p class="mb-0">${review.content}</p>
@@ -185,13 +185,10 @@ async function handleReviewSubmit(event) {
     // 입력된 별점과 리뷰 내용을 가져옵니다
     const ratingElement = document.getElementById('review-rating');
     const contentElement = document.getElementById('review-content');
-    const productIdElement = document.getElementById('product-id');
+    const urlParams = new URLSearchParams(window.location.search);
+    const productId = urlParams.get('id');
 
-    console.log(ratingElement)
-    console.log(contentElement)
-    console.log(productIdElement)
-
-    if (!ratingElement || !contentElement || !productIdElement) {
+    if (!ratingElement || !contentElement) {
         console.error('필요한 HTML 요소를 찾을 수 없습니다.');
         alert('죄송합니다. 리뷰를 제출할 수 없습니다. 페이지를 새로고침한 후 다시 시도해 주세요.');
         return;
@@ -199,24 +196,27 @@ async function handleReviewSubmit(event) {
 
     const rating = ratingElement.value;
     const content = contentElement.value;
-    const productId = productIdElement.value;
     
     try {
         // 백엔드로 리뷰 데이터를 전송합니다
-        const response = await fetch(`${API_BASE_URL}market/products/${productId}`, {
+        const response = await fetch(`${API_BASE_URL}market/products/${productId}/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCSRFToken(),
             },
+            credentials: 'include',
             body: JSON.stringify({ content, rating }),
         });
         
         if (!response.ok) {
+            const errorText = await response.text();
+            console.error('서버 응답:', response.status, errorText);
             throw new Error('서버 응답이 올바르지 않습니다');
         }
         
         const result = await response.json();
+        console.log('서버 응답:', result);
         
         if (result.status === 'success') {
             // 서버로부터 받은 데이터로 리뷰를 페이지에 추가합니다
@@ -256,7 +256,7 @@ function addReviewToList(review) {
             <div class="bg-light p-3 rounded">
                 <div class="d-flex justify-content-between">
                     <h6 class="mb-1">${review.user}</h6>
-                    <small>${review.timestamp}</small>
+                    <small>작성일 : ${review.created_at}</small>
                 </div>
                 <p class="mb-1">별점: ${review.rating}</p>
                 <p class="mb-0">${review.content}</p>
