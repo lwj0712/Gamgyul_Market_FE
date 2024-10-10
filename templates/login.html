@@ -1,24 +1,98 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>로그인</title>
+	<title>감귤하우스 - 로그인</title>
+
+	<!-- Meta Tags -->
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<meta name="author" content="Webestica.com">
+	<meta name="description" content="Bootstrap 5 based Social Media Network and Community Theme">
+
+	<!-- Favicon -->
+	<link rel="shortcut icon" href="assets/images/favicon.ico">
+
+	<!-- Google Font -->
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+
+	<!-- Plugins CSS -->
+	<link rel="stylesheet" type="text/css" href="assets/vendor/font-awesome/css/all.min.css">
+	<link rel="stylesheet" type="text/css" href="assets/vendor/bootstrap-icons/bootstrap-icons.css">
+
+	<!-- Theme CSS -->
+	<link rel="stylesheet" type="text/css" href="assets/css/style.css">
+	 
 </head>
+
 <body>
-    <div class="login-container">
-        <h1>로그인</h1>
-        <form id="login-form">
-            <input type="email" id="email" name="email" placeholder="이메일" required>
-            <input type="password" id="password" name="password" placeholder="비밀번호" required>
-            <div id="error-message"></div>
-            <button type="submit">로그인</button>
-        </form>
-        <div id="reactivation-container" style="display: none;">
-            <button id="request-reactivation">재활성화 요청</button>
+
+<!-- **************** MAIN CONTENT START **************** -->
+<main>
+  
+  <!-- Container START -->
+  <div class="container">
+    <div class="row justify-content-center align-items-center vh-100 py-5">
+      <!-- Main content START -->
+      <div class="col-sm-10 col-md-8 col-lg-7 col-xl-6 col-xxl-5">
+        <!-- Sign in START -->
+        <div class="card card-body text-center p-4 p-sm-5">
+          <!-- Title -->
+          <h1 class="mb-2">로그인</h1>
+          <p class="mb-0">계정이 없으신가요? <a href="/templates/signup.html">회원가입</a></p>
+          <!-- Form START -->
+          <form class="mt-sm-4" id="login-form">
+            <!-- Email -->
+            <div class="mb-3 input-group-lg">
+              <input type="email" class="form-control" id="email" name="email" placeholder="이메일" required>
+            </div>
+            <!-- Password -->
+            <div class="mb-3 position-relative">
+              <div class="input-group input-group-lg">
+                <input class="form-control fakepassword" type="password" id="password" name="password" placeholder="비밀번호" required>
+                <span class="input-group-text p-0">
+                  <i class="fakepasswordicon fa-solid fa-eye-slash cursor-pointer p-2 w-40px"></i>
+                </span>
+              </div>
+            </div>
+            <!-- Error message -->
+            <div id="error-message" class="text-danger mb-3"></div>
+            <!-- Button -->
+            <div class="d-grid"><button type="submit" class="btn btn-lg btn-primary">로그인</button></div>
+            <!-- Reactivation request -->
+            <div id="reactivation-container" style="display: none;" class="mt-3">
+              <button id="request-reactivation" class="btn btn-outline-primary">재활성화 요청</button>
+            </div>
+            <!-- Copyright -->
+            <p class="mb-0 mt-3">©2024 <a target="_blank" href="#">감귤하우스</a>. All rights reserved</p>
+          </form>
+          <!-- Form END -->
         </div>
-        <p>계정이 없으신가요? <a href="/templates/signup.html">회원가입</a></p>
-    </div>
-    <script src="login.js"></script>
+        <!-- Sign in END -->
+      </div>
+    </div> <!-- Row END -->
+  </div>
+  <!-- Container END -->
+
+</main>
+<!-- **************** MAIN CONTENT END **************** -->
+ 
+
+<!-- =======================
+JS libraries, plugins and custom scripts -->
+
+<!-- Bootstrap JS -->
+<script src="assets/vendor/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Vendors -->
+<script src="assets/vendor/pswmeter/pswmeter.min.js"></script>
+
+<!-- Theme Functions -->
+<script src="assets/js/functions.js"></script>
+
+<!-- Custom login script -->
+<script src="login.js"></script>
+  
 </body>
 </html>
+ 
