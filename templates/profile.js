@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
         return fetch(url, options);
     }
-    
+
     function showErrorMessage(message) {
         alert(message);
     }
@@ -77,6 +77,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = await fetchWithCSRF(`${API_BASE_URL}/accounts/profile/${username}/`);
             if (response.ok) {
                 const profileData = await response.json();
+                console.log('Received profile data:', profileData); // 추가된 로그
                 updateProfileUI(profileData);
             } else if (response.status === 401) {
                 showLoginLink();
@@ -89,17 +90,25 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function getFullImageUrl(imageUrl) {
+        if (!imageUrl) return DEFAULT_PROFILE_IMAGE;
+        if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+            return imageUrl;
+        }
+        return `${API_BASE_URL}${imageUrl}`;
+    }
+
     function updateProfileUI(profileData) {
-        if (profileImage) profileImage.src = profileData.profile_image || DEFAULT_PROFILE_IMAGE;
+        if (profileImage) profileImage.src = getFullImageUrl(profileData.profile_image) || DEFAULT_PROFILE_IMAGE;
         if (usernameElement) usernameElement.textContent = profileData.username;
         if (bioElement) bioElement.textContent = profileData.bio || '소개가 없습니다.';
-        if (followersCountElement) followersCountElement.textContent = profileData.followers_count;
-        if (followingCountElement) followingCountElement.textContent = profileData.following_count;
+        if (followersCountElement) followersCountElement.textContent = profileData.followers_count || 0;
+        if (followingCountElement) followingCountElement.textContent = profileData.following_count || 0;
     
         updateEmailDisplay(profileData);
-        renderFollowersList(profileData.followers);
-        renderFollowingList(profileData.following);
-        renderProductList(profileData.products);
+        renderFollowersList(profileData.followers || []);
+        renderFollowingList(profileData.following || []);
+        renderProductList(profileData.products || []);
         updateProfileButtons(profileData.is_self);
     
         if (loginLink) loginLink.style.display = 'none';
@@ -132,8 +141,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateProfileDropdown(profileData) {
-        if (navProfileImage) navProfileImage.src = profileData.profile_image || DEFAULT_PROFILE_IMAGE;
-        if (dropdownProfileImage) dropdownProfileImage.src = profileData.profile_image || DEFAULT_PROFILE_IMAGE;
+        if (navProfileImage) navProfileImage.src = getFullImageUrl(profileData.profile_image) || DEFAULT_PROFILE_IMAGE;
+        if (dropdownProfileImage) dropdownProfileImage.src = getFullImageUrl(profileData.profile_image) || DEFAULT_PROFILE_IMAGE;
         if (dropdownUsername) dropdownUsername.textContent = profileData.username;
         if (dropdownEmail) dropdownEmail.textContent = profileData.email;
     
@@ -146,17 +155,26 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Followers and Following Functions
+    // 팔로워 목록을 렌더링할 때
     function renderFollowersList(followers) {
-        allFollowers = followers;
+        if (!Array.isArray(followers)) {
+            console.warn('Followers data is not an array:', followers);
+            followers = [];
+        }
+        allFollowers = followers; // 모든 팔로워를 포함
         updateFollowersList();
         if (followersCountElement) {
             followersCountElement.textContent = allFollowers.length;
         }
     }
-
+    
+    // 팔로잉 목록을 렌더링할 때
     function renderFollowingList(following) {
-        allFollowing = following;
+        if (!Array.isArray(following)) {
+            console.warn('Following data is not an array:', following);
+            following = [];
+        }
+        allFollowing = following; // 모든 팔로잉 사용자를 포함
         updateFollowingList();
     }
 
@@ -191,21 +209,26 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function createUserListItem(user, type) {
+        const currentUser = localStorage.getItem('username');
+        const isCurrentUser = user.username === currentUser;
+        
         return `
             <li class="list-group-item d-flex align-items-center justify-content-between">
                 <div class="d-flex align-items-center">
-                    <img src="${user.profile_image || DEFAULT_PROFILE_IMAGE}" alt="${user.username}" class="avatar-img rounded-circle" style="width: 40px; height: 40px;">
+                     <img src="${getFullImageUrl(user.profile_image) || DEFAULT_PROFILE_IMAGE}" alt="${user.username}" class="avatar-img rounded-circle" style="width: 40px; height: 40px;">
                     <div class="ms-3">
-                        <h6 class="mb-0">${user.username}</h6>
+                        <h6 class="mb-0">${user.username}${isCurrentUser ? ' (나)' : ''}</h6>
                     </div>
                 </div>
                 <div>
-                    <button class="btn btn-sm btn-primary-soft me-2 chat-btn" data-user-id="${user.id}">
-                        <i class="bi bi-chat-left-text"></i>
-                    </button>
-                    <button class="btn btn-sm ${type === 'following' ? 'btn-danger-soft unfollow-btn' : 'btn-success-soft follow-btn'}" data-user-id="${user.id}">
-                        ${type === 'following' ? '언팔로우' : '팔로우'}
-                    </button>
+                    ${!isCurrentUser ? `
+                        <button class="btn btn-sm btn-primary-soft me-2 chat-btn" data-user-id="${user.id}">
+                            <i class="bi bi-chat-left-text"></i>
+                        </button>
+                        <button class="btn btn-sm ${type === 'following' ? 'btn-danger-soft unfollow-btn' : 'btn-success-soft follow-btn'}" data-user-id="${user.id}">
+                            ${type === 'following' ? '언팔로우' : '팔로우'}
+                        </button>
+                    ` : ''}
                 </div>
             </li>
         `;
