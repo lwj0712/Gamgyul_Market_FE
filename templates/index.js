@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const profileLink = document.getElementById('profile-link');
     const logoutBtn = document.getElementById('logout-btn');
     const postList = document.getElementById('post-list');
+    const friendRecommendations = document.getElementById('friend-recommendations');
 
     // 사용자 인증
     async function checkAuth() {
@@ -99,7 +100,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-
+    
     // CSRF 토큰 가져오기
     function getCSRFToken() {
         return document.cookie.split('; ')
@@ -107,6 +108,83 @@ document.addEventListener('DOMContentLoaded', function() {
             ?.split('=')[1] || '';
     }
 
+    // 친구 추천 목록 불러오기
+    async function loadFriendRecommendations() {
+        try {
+            const response = await fetch('http://127.0.0.1:8000/accounts/recommend/', {
+                method: 'GET',
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                const recommendationsData = await response.json();
+                displayFriendRecommendations(recommendationsData);
+            } else {
+                console.error('친구 추천 목록 불러오기 실패');
+                friendRecommendations.innerHTML = '<p>친구 추천 목록을 불러오는데 실패했습니다.</p>';
+            }
+        } catch (error) {
+            console.error('친구 추천 목록 불러오기 중 오류 발생:', error);
+            friendRecommendations.innerHTML = '<p>친구 추천 목록을 불러오는데 실패했습니다.</p>';
+        }
+    }
+
+    // 친구 추천 표시
+    function displayFriendRecommendations(recommendations) {
+        friendRecommendations.innerHTML = '';
+        if (recommendations && recommendations.length > 0) {
+            recommendations.forEach(user => {
+                const userElement = document.createElement('div');
+                userElement.className = 'friend-recommendation';
+                userElement.innerHTML = `
+                    <img src="${user.profile_image || '/path/to/default/image.jpg'}" alt="${user.username}" style="width: 50px; height: 50px; border-radius: 50%;">
+                    <span>${user.username}</span>
+                    <button class="follow-btn" data-user-id="${user.id}">팔로우</button>
+                `;
+                friendRecommendations.appendChild(userElement);
+            });
+            addFollowButtonListeners();
+        } else {
+            friendRecommendations.innerHTML = '<p>추천할 친구가 없습니다.</p>';
+        }
+    }
+
+    // 팔로우 버튼에 이벤트 리스너 추가
+    function addFollowButtonListeners() {
+        const followButtons = document.querySelectorAll('.follow-btn');
+        followButtons.forEach(button => {
+            button.addEventListener('click', async function() {
+                const userId = this.getAttribute('data-user-id');
+                try {
+                    const response = await fetch(`http://127.0.0.1:8000/accounts/follow/${userId}/`, {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {
+                            'X-CSRFToken': getCSRFToken()
+                        }
+                    });
+
+                    if (response.ok) {
+                        this.textContent = '팔로잉';
+                        this.disabled = true;
+                    } else {
+                        console.error('팔로우 실패');
+                    }
+                } catch (error) {
+                    console.error('팔로우 중 오류 발생:', error);
+                }
+            });
+        });
+    }
+
     // 초기 실행
-    checkAuth();
+    async function init() {
+        await checkAuth();
+        loadPosts();
+        if (userInfo.style.display === 'block') {
+            loadFriendRecommendations();
+        }
+    }
+
+    init();
 });

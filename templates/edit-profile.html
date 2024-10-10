@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>프로필 수정</title>
+</head>
+<body>
+    <header>
+        <h1>프로필 수정</h1>
+        <nav>
+            <a href="/templates/index.html">홈으로</a>
+            <a id="back-to-profile" href="#">프로필로 돌아가기</a>
+        </nav>
+    </header>
+    <main>
+        <form id="edit-profile-form">
+            <div>
+                <label for="username">사용자명:</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div>
+                <label for="bio">자기소개:</label>
+                <textarea id="bio" name="bio"></textarea>
+            </div>
+            <div>
+                <label for="profile-image">프로필 이미지:</label>
+                <input type="file" id="profile-image" name="profile_image" accept="image/*">
+            </div>
+            <div>
+                <img id="current-profile-image" src="" alt="현재 프로필 이미지" style="max-width: 200px;">
+            </div>
+            <button type="submit">저장</button>
+        </form>
+    </main>
+    <script src="/templates/edit-profile.js"></script>
+</body>
+</html>

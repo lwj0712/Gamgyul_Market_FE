@@ -75,7 +75,7 @@
 
 <script>
     const API_BASE_URL = "http://127.0.0.1:8000/";
-    
+
     document.getElementById('productForm').addEventListener('submit', function(e) {
         e.preventDefault();
     
@@ -93,15 +93,12 @@
             formData.append('images', imageFiles[i]);
         }
     
-        // 인증 토큰을 로컬 스토리지에서 가져오기
-        const token = localStorage.getItem('token');  // 로그인 시 저장된 토큰
-    
         fetch(`${API_BASE_URL}market/products/create/`, {
             method: 'POST',
             body: formData,
+            credentials: 'include',  // 쿠키를 포함시킵니다
             headers: {
-                'Authorization': `Token ${token}`,  // 토큰을 인증 헤더에 추가
-                'X-CSRFToken': getCookie('csrftoken')  // CSRF 토큰 추가 (Django에서 필요시)
+                'X-CSRFToken': getCSRFToken(),  // CSRF 토큰 추가
             }
         })
         .then(response => {
@@ -120,24 +117,11 @@
         });
     });
     
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
+    function getCSRFToken() {
+        return document.cookie.split('; ')
+            .find(row => row.startsWith('csrftoken='))
+            ?.split('=')[1] || '';
     }
-
-    // const csrfToken = getCookie('csrftoken');
-    // console.log('CSRF Token:', csrfToken);
-
     </script>
     
     

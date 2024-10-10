@@ -4,6 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>감귤하우스 - 메인</title>
+    <style>
+        .container {
+            display: flex;
+        }
+        #post-list {
+            flex: 2;
+        }
+        #sidebar {
+            flex: 1;
+            padding: 20px;
+        }
+        .friend-recommendation {
+            margin-bottom: 10px;
+        }
+    </style>
 </head>
 <body>
     <nav id="main-nav">
@@ -14,15 +29,24 @@
             <button id="logout-btn">로그아웃</button>
         </div>
         <div id="login-link" style="display: none;">
-            <a href="/login.html">로그인</a>
+            <a href="/templates/login.html">로그인</a>
         </div>
     </nav>
 
-    <main>
-        <section id="post-list">
-            <!-- 게시물 목록이 여기에 동적으로 추가됩니다 -->
-        </section>
-    </main>
+    <div class="container">
+        <main>
+            <section id="post-list">
+                <!-- 게시물 목록이 여기에 동적으로 추가됩니다 -->
+            </section>
+        </main>
+
+        <aside id="sidebar">
+            <h2>친구 추천</h2>
+            <div id="friend-recommendations">
+                <!-- 추천 친구 목록이 여기에 동적으로 추가됩니다 -->
+            </div>
+        </aside>
+    </div>
 
     <script src="index.js"></script>
 </body>
