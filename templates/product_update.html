@@ -50,15 +50,15 @@
                         </div>
                         <div class="mb-3">
                             <label for="variety" class="form-label">품종</label>
-                            <input type="text" class="form-control" id="variety" required>
+                            <input type="text" class="form-control" id="variety">
                         </div>
                         <div class="mb-3">
                             <label for="region" class="form-label">재배 지역</label>
-                            <input type="text" class="form-control" id="region" required>
+                            <input type="text" class="form-control" id="region">
                         </div>
                         <div class="mb-3">
                             <label for="harvestDate" class="form-label">재배 일자</label>
-                            <input type="date" class="form-control" id="harvestDate" required>
+                            <input type="date" class="form-control" id="harvestDate">
                         </div>
                         <div class="mb-3">
                             <label for="images" class="form-label">이미지 업로드 (최대 5장)</label>
@@ -126,7 +126,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
         fetch(`${API_BASE_URL}market/products/${productId}/update/`, {
             method: 'PATCH',
-            body: formData
+            body: formData,
+            credentials: 'include',  // 쿠키를 포함시킵니다
+            headers: {
+                'X-CSRFToken': getCSRFToken(),  // CSRF 토큰 추가
+            }
         })
         .then(response => {
             if (!response.ok) {
@@ -144,6 +148,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+function getCSRFToken() {
+    return document.cookie.split('; ')
+        .find(row => row.startsWith('csrftoken='))
+        ?.split('=')[1] || '';
+}
 </script>
 
 </body>
