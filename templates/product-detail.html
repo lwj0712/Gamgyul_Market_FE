@@ -99,6 +99,10 @@
 <!-- Your custom JavaScript -->
 <script>
 const API_BASE_URL = "http://127.0.0.1:8000/";
+const username = getCurrentUsername();
+console.log(username);
+const urlParams = new URLSearchParams(window.location.search);
+const productId = urlParams.get('id');
 
 document.addEventListener('DOMContentLoaded', function() {
     // Fetch and display product details
@@ -175,9 +179,65 @@ function displayReviews(reviews) {
                 </div>
             </div>
         `;
+
+        // 현재 사용자가 리뷰 작성자인 경우 삭제 버튼 추가
+        if (review.user === username) {
+            const deleteButton = document.createElement('button');
+            deleteButton.className = 'btn btn-danger btn-sm ms-2 align-self-start delete-review';
+            deleteButton.textContent = '삭제';
+            deleteButton.dataset.reviewId = review.id;
+            reviewElement.appendChild(deleteButton);
+        }
+
         reviewList.appendChild(reviewElement);
     });
+
+    // 삭제 버튼에 대한 이벤트 리스너 추가
+    reviewList.addEventListener('click', function(e) {
+        if (e.target.classList.contains('delete-review')) {
+            const reviewId = e.target.dataset.reviewId;
+            if (confirm('정말로 이 리뷰를 삭제하시겠습니까?')) {
+                deleteReview(reviewId);
+            }
+        }
+    });
 }
+
+// 리뷰 삭제 함수 (서버와의 통신을 위해 별도로 구현해야 함)
+function deleteReview(reviewId) {
+    // 여기에 서버와 통신하여 리뷰를 삭제하는 코드를 구현해야 합니다.
+    // 예를 들어:
+    fetch(`${API_BASE_URL}market/products/${productId}/reviews/${reviewId}/delete/`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': getCSRFToken(),
+        },
+        credentials: 'include',
+    })
+    .then(response => {
+        if (response.status === 204) {
+            // 204 No Content는 성공적인 삭제를 의미합니다
+            return { status: 'success', message: '리뷰가 성공적으로 삭제되었습니다.' };
+        } else if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        // 204가 아닌 다른 성공 상태 코드의 경우 (예: 200)
+        return response.json();
+    })
+    .then(data => {
+        console.log('Response:', data.message);
+        // UI에서 해당 리뷰 제거
+        const reviewElement = document.querySelector(`[data-review-id="${reviewId}"]`);
+        if (reviewElement) {
+            reviewElement.remove();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('리뷰 삭제 중 오류가 발생했습니다: ' + error.message);
+    });
+}
+
 
 async function handleReviewSubmit(event) {
     event.preventDefault();
@@ -316,6 +376,11 @@ function getCSRFToken() {
         .find(row => row.startsWith('csrftoken='))
         ?.split('=')[1] || '';
 }
+
+function getCurrentUsername() {
+        return localStorage.getItem('username') || '';
+    }
+
 </script>
 </body>
 </html>
