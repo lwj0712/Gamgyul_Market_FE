@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const data = await response.json();
             console.log('회원가입 성공:', data);
+            alert('회원가입에 성공했습니다! 로그인 페이지로 이동합니다.');
             
             // 로그인 페이지로 리다이렉트
             window.location.href = '/templates/login.html';
