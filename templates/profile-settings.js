@@ -1,14 +1,16 @@
 document.addEventListener('DOMContentLoaded', function() {
     const urlParams = new URLSearchParams(window.location.search);
     const username = urlParams.get('username');
+    const backToProfileLink = document.getElementById('back-to-profile');
 
     if (!username) {
         alert('사용자 정보를 찾을 수 없습니다.');
-        window.location.href = '/templates/login.html'; // 또는 적절한 페이지로 리다이렉트
+        window.location.href = '/templates/login.html';
         return;
     }
 
     loadPrivacySettings(username);
+    loadCurrentProfile();
 
     document.getElementById('saveBtn').addEventListener('click', function(e) {
         e.preventDefault();
@@ -35,7 +37,40 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         deleteAccount();
     });
+
+    // 프로필로 돌아가기 버튼 기능
+    if (backToProfileLink) {
+        backToProfileLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.href = `/templates/profile.html?username=${username}`;
+        });
+    }
 });
+
+async function loadCurrentProfile() {
+    try {
+        const response = await fetch('http://127.0.0.1:8000/accounts/profile/', {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'X-CSRFToken': getCSRFToken(),
+            }
+        });
+
+        if (response.ok) {
+            const profileData = await response.json();
+            // 프로필 데이터를 사용하여 필요한 작업 수행
+            console.log('프로필 데이터:', profileData);
+        } else {
+            const errorData = await response.json();
+            console.error('프로필 정보 로드 실패:', errorData);
+            alert('프로필 정보를 불러오는데 실패했습니다: ' + JSON.stringify(errorData));
+        }
+    } catch (error) {
+        console.error('프로필 정보 로드 중 오류 발생:', error);
+        alert('프로필 정보를 불러오는 중 오류가 발생했습니다.');
+    }
+}
 
 function loadPrivacySettings(username) {
     fetch(`http://127.0.0.1:8000/accounts/privacy-settings/${username}/`, {
@@ -229,19 +264,12 @@ function deleteAccount() {
     })
     .then(data => {
         alert(data.detail);
-        // 계정이 삭제되었으므로 로그인 페이지로 리다이렉트
         window.location.href = '/templates/login.html';
     })
     .catch(error => {
         console.error('Error:', error);
         alert(error.message);
     });
-}
-
-function getCurrentUsername() {
-    // 이 함수는 현재 로그인한 사용자의 username을 반환해야 합니다.
-    // 예를 들어, localStorage나 세션에서 가져올 수 있습니다.
-    return localStorage.getItem('username') || '';
 }
 
 function getCSRFToken() {
