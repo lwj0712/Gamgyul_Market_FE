@@ -15,7 +15,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const urlParams = new URLSearchParams(window.location.search);
     const username = urlParams.get('username');
-
     const editProfileBtn = document.getElementById('edit-profile-btn');
     const profileSettingsBtn = document.getElementById('profile-settings-btn');
 
@@ -56,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('프로필 로드 중 오류 발생:', error);
         }
     }
-
+    
     function updateProfileUI(profileData) {
         profileImage.src = profileData.profile_image || '/path/to/default/image.jpg';
         usernameElement.textContent = profileData.username;
@@ -64,15 +63,36 @@ document.addEventListener('DOMContentLoaded', function() {
         followersCountElement.textContent = profileData.followers_count;
         followingCountElement.textContent = profileData.following_count;
 
+        const emailElement = document.getElementById('email-address');
+        const emailContainer = document.getElementById('email');
+        if (emailElement && emailContainer) {
+            if (profileData.email && (profileData.is_self || profileData.show_email)) {
+                emailElement.textContent = profileData.email;
+                emailContainer.style.display = 'block';
+            } else {
+                emailContainer.style.display = 'none';
+            }
+        }
+
         // 팔로워 목록
         if (profileData.followers) {
             followersListSection.style.display = 'block';
             followersList.innerHTML = profileData.followers.map(follower => `
-                <li class="user-item">
-                    <img src="${follower.profile_image || '/path/to/default/image.jpg'}" alt="${follower.username || '사용자'}" class="profile-image">
-                    <span class="username">${follower.username || '알 수 없는 사용자'}</span>
-                    <button class="chat-btn" data-user-id="${follower.id}">채팅</button>
-                    <button class="follow-btn" data-user-id="${follower.id}">팔로우</button>
+                <li class="list-group-item d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <img src="${follower.profile_image || '/path/to/default/image.jpg'}" alt="${follower.username || '사용자'}" class="avatar-img rounded-circle" style="width: 40px; height: 40px;">
+                        <div class="ms-3">
+                            <h6 class="mb-0">${follower.username || '알 수 없는 사용자'}</h6>
+                        </div>
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-primary-soft me-2" data-user-id="${follower.id}">
+                            <i class="bi bi-chat-left-text"></i>
+                        </button>
+                        <button class="btn btn-sm btn-success-soft follow-btn" data-user-id="${follower.id}">
+                            팔로우
+                        </button>
+                    </div>
                 </li>
             `).join('');
         } else {
@@ -83,11 +103,21 @@ document.addEventListener('DOMContentLoaded', function() {
         if (profileData.following) {
             followingListSection.style.display = 'block';
             followingList.innerHTML = profileData.following.map(following => `
-                <li class="user-item">
-                    <img src="${following.profile_image || '/path/to/default/image.jpg'}" alt="${following.username || '사용자'}" class="profile-image">
-                    <span class="username">${following.username || '알 수 없는 사용자'}</span>
-                    <button class="chat-btn" data-user-id="${following.id}">채팅</button>
-                    <button class="unfollow-btn" data-user-id="${following.id}">언팔로우</button>
+                <li class="list-group-item d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <img src="${following.profile_image || '/path/to/default/image.jpg'}" alt="${following.username || '사용자'}" class="avatar-img rounded-circle" style="width: 40px; height: 40px;">
+                        <div class="ms-3">
+                            <h6 class="mb-0">${following.username || '알 수 없는 사용자'}</h6>
+                        </div>
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-primary-soft me-2" data-user-id="${following.id}">
+                            <i class="bi bi-chat-left-text"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger-soft unfollow-btn" data-user-id="${following.id}">
+                            언팔로우
+                        </button>
+                    </div>
                 </li>
             `).join('');
         } else {
@@ -279,26 +309,28 @@ document.addEventListener('DOMContentLoaded', function() {
                     'X-CSRFToken': getCSRFToken(),
                 }
             });
-
+    
             if (!response.ok) {
                 throw new Error('Search request failed');
             }
-
+    
             const data = await response.json();
+            console.log('Search response:', data); // 추가된 로그
             displaySearchResults(data);
         } catch (error) {
             console.error('Error:', error);
         }
     }
 
-    function displaySearchResults(results) {
+    function displaySearchResults(data) {
+        const results = data.results || []; // 페이지네이션된 응답을 고려
         searchResults.innerHTML = '';
-
+        
         if (results.length === 0) {
             searchResults.style.display = 'none';
             return;
         }
-
+    
         results.forEach(user => {
             const resultItem = document.createElement('div');
             resultItem.className = 'search-result-item';
@@ -311,7 +343,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             searchResults.appendChild(resultItem);
         });
-
+    
         searchResults.style.display = 'block';
     }
     

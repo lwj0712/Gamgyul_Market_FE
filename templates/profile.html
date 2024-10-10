@@ -1,114 +1,208 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>프로필</title>
-    <style>
-        nav {
-            background-color: #f8f9fa;
-            padding: 10px;
-        }
-        nav a, nav button {
-            margin-right: 10px;
-        }
-        .user-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        .profile-image {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            margin-right: 10px;
-        }
-        .username {
-            margin-right: 10px;
-        }
-        .chat-btn, .follow-btn, .unfollow-btn {
-            margin-left: 5px;
-            padding: 5px 10px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .follow-btn {
-            background-color: #3897f0;
-            color: white;
-        }
-        .unfollow-btn {
-            background-color: #ed4956;
-            color: white;
-        }
-        .search-container {
-            position: relative;
-            margin-bottom: 20px;
-        }
-        #searchResults {
-            display: none;
-            position: absolute;
-            background-color: white;
-            border: 1px solid #ddd;
-            max-height: 300px;
-            overflow-y: auto;
-            z-index: 1000;
-            width: 100%;
-        }
-        .search-result-item {
-            padding: 10px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-        }
-        .search-result-item:hover {
-            background-color: #f0f0f0;
-        }
-        .search-result-item img {
-            margin-right: 10px;
-        }
-    </style>
+	<title>감귤하우스 - 프로필</title>
+
+	<!-- Meta Tags -->
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<meta name="author" content="Webestica.com">
+	<meta name="description" content="Bootstrap 5 based Social Media Network and Community Theme">
+
+	<!-- Favicon -->
+	<link rel="shortcut icon" href="assets/images/favicon.ico">
+
+	<!-- Google Font -->
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+
+	<!-- Plugins CSS -->
+	<link rel="stylesheet" type="text/css" href="assets/vendor/font-awesome/css/all.min.css">
+	<link rel="stylesheet" type="text/css" href="assets/vendor/bootstrap-icons/bootstrap-icons.css">
+
+	<!-- Theme CSS -->
+	<link rel="stylesheet" type="text/css" href="assets/css/style.css">
+	 
 </head>
+
 <body>
-    <header>
-        <nav>
-            <a href="/templates/index.html">홈</a>
-            <a href="/templates/product_list.html">마켓</a>
-            <a href="/templates/chat.html">채팅</a>
-            <a href="/templates/alarm.html">알림</a>
-            <a href="/templates/login.html" id="login-link" style="display: none;">로그인</a>
-            <button id="logout-btn" style="display: none;">로그아웃</button>
-        </nav>
-    </header>
-    <main>
-        <h1>프로필</h1>
-        <div class="search-container">
-            <input type="text" id="searchInput" placeholder="사용자 검색...">
-            <div id="searchResults"></div>
+
+<!-- Header START -->
+<header class="navbar-light fixed-top header-static bg-mode">
+	<!-- Logo Nav START -->
+	<nav class="navbar navbar-expand-lg">
+		<div class="container">
+			<!-- Logo START -->
+			<a class="navbar-brand" href="index.html">
+        <img class="light-mode-item navbar-brand-item" src="assets/images/logo.svg" alt="logo">
+				<img class="dark-mode-item navbar-brand-item" src="assets/images/logo.svg" alt="logo">
+			</a>
+			<!-- Logo END -->
+
+			<!-- Responsive navbar toggler -->
+			<button class="navbar-toggler ms-auto icon-md btn btn-light p-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-animation">
+          <span></span>
+          <span></span>
+          <span></span>
+        </span>
+      </button>
+
+			<!-- Main navbar START -->
+			<div class="collapse navbar-collapse" id="navbarCollapse">
+				<ul class="navbar-nav navbar-nav-scroll ms-auto">
+					<li class="nav-item"> <a class="nav-link" href="/templates/index.html">홈</a></li>
+					<li class="nav-item"> <a class="nav-link" href="/templates/product_list.html">마켓</a></li>
+					<li class="nav-item"> <a class="nav-link" href="/templates/chat.html">채팅</a></li>
+					<li class="nav-item"> <a class="nav-link" href="/templates/alarm.html">알림</a></li>
+				</ul>
+			</div>
+			<!-- Main navbar END -->
+
+      <!-- Nav right START -->
+			<ul class="nav flex-nowrap align-items-center ms-sm-3 list-unstyled">
+				<li class="nav-item ms-2">
+					<a class="nav-link" href="/templates/login.html" id="login-link" style="display: none;">로그인</a>
+				</li>
+				<li class="nav-item ms-2">
+					<button class="btn btn-primary-soft" id="logout-btn" style="display: none;">로그아웃</button>
+				</li>
+			</ul>
+			<!-- Nav right END -->
+		</div>
+	</nav>
+	<!-- Logo Nav END -->
+</header>
+<!-- Header END -->
+
+<!-- **************** MAIN CONTENT START **************** -->
+<main>
+  
+  <!-- Container START -->
+  <div class="container">
+    <div class="row g-4">
+
+      <!-- Main content START -->
+      <div class="col-lg-8 vstack gap-4">
+        <!-- My profile START -->
+        <div class="card">
+          <!-- Cover image -->
+          <div class="h-200px rounded-top" style="background-image:url('templates/images/profile-cover.png'); background-position: center; background-size: cover; background-repeat: no-repeat;"></div>
+            <!-- Card body START -->
+            <div class="card-body py-0">
+              <div class="d-sm-flex align-items-start text-center text-sm-start">
+                <div>
+                  <!-- Avatar -->
+                  <div class="avatar avatar-xxl mt-n5 mb-3">
+                    <img class="avatar-img rounded-circle border border-white border-3" src="" alt="프로필 이미지" id="profile-image">
+                  </div>
+                </div>
+                <div class="ms-sm-4 mt-sm-3">
+                  <!-- Info -->
+                  <h1 class="mb-0 h5" id="username"></h1>
+                  <p id="email" class="mb-0 mt-1">
+                    <i class="bi bi-envelope me-1"></i>
+                    <span id="email-address"></span>
+                  </p>
+                  <p id="bio" class="mt-2"></p>
+                </div>
+                <!-- Button -->
+                <div class="d-flex mt-3 justify-content-center ms-sm-auto">
+                  <button class="btn btn-primary me-2" type="button" id="follow-btn" style="display: none;">팔로우</button>
+                  <button class="btn btn-danger-soft me-2" type="button" id="edit-profile-btn">프로필 수정</button>
+                  <button class="btn btn-primary-soft" type="button" id="profile-settings-btn">프로필 설정</button>
+                </div>
+              </div>
+              <!-- List profile -->
+              <ul class="list-inline mb-0 text-center text-sm-start mt-3 mt-sm-0">
+                <li class="list-inline-item"><i class="bi bi-people-fill me-1"></i> 팔로워: <span id="followers-count" class="fw-bold"></span></li>
+                <li class="list-inline-item"><i class="bi bi-person-plus-fill me-1"></i> 팔로잉: <span id="following-count" class="fw-bold"></span></li>
+              </ul>
+            </div>
+            <!-- Card body END -->
+          </div>
+          <!-- My profile END -->
+
+          <!-- Share feed START -->
+          <div class="card card-body">
+            <div class="d-flex mb-3">
+              <!-- Search -->
+              <div class="search-container w-100">
+                <input type="text" id="searchInput" class="form-control" placeholder="사용자 검색...">
+                <div id="searchResults" class="mt-2 list-group"></div>
+              </div>
+            </div>
+          </div>
+          <!-- Share feed END -->
+
+          <!-- Products section START -->
+          <div class="card" id="products">
+            <div class="card-header border-0 pb-0">
+              <h5 class="card-title">상품 목록</h5>
+            </div>
+            <!-- Card body START -->
+            <div class="card-body">
+              <div id="product-list" class="row g-4"></div>
+            </div>
+            <!-- Card body END -->
+          </div>
+          <!-- Products section END -->
+      </div>
+      <!-- Main content END -->
+
+      <!-- Right sidebar START -->
+      <div class="col-lg-4">
+        <!-- Followers Card START -->
+        <div class="card">
+          <!-- Card header START -->
+          <div class="card-header d-sm-flex justify-content-between align-items-center border-0">
+            <h5 class="card-title mb-0">팔로워</h5>
+          </div>
+          <!-- Card header END -->
+          <!-- Card body START -->
+          <div class="card-body">
+            <div id="followers-list">
+              <ul id="followers" class="list-unstyled mb-0"></ul>
+            </div>
+          </div>
+          <!-- Card body END -->
         </div>
-        <section id="profile-info">
-            <img id="profile-image" src="" alt="프로필 이미지">
-            <h2 id="username"></h2>
-            <p id="bio"></p>
-            <p>팔로워: <span id="followers-count"></span></p>
-            <p>팔로잉: <span id="following-count"></span></p>
-            <button id="follow-btn" style="display: none;">팔로우</button>
-            <button id="edit-profile-btn">프로필 수정</button>
-            <button id="profile-settings-btn">프로필 설정</button>
-        </section>
-        <section id="followers-list" style="display: none;">
-            <h3>팔로워 목록</h3>
-            <ul id="followers"></ul>
-        </section>
-        <section id="following-list" style="display: none;">
-            <h3>팔로잉 목록</h3>
-            <ul id="following"></ul>
-        </section>
-        <section id="products">
-            <h3>상품 목록</h3>
-            <div id="product-list"></div>
-        </section>
-    </main>
-    <script src="/templates/profile.js"></script>
+        <!-- Followers Card END -->
+
+        <!-- Following Card START -->
+        <div class="card mt-4">
+          <!-- Card header START -->
+          <div class="card-header d-sm-flex justify-content-between align-items-center border-0">
+            <h5 class="card-title mb-0">팔로잉</h5>
+          </div>
+          <!-- Card header END -->
+          <!-- Card body START -->
+          <div class="card-body">
+            <div id="following-list">
+              <ul id="following" class="list-unstyled mb-0"></ul>
+            </div>
+          </div>
+          <!-- Card body END -->
+        </div>
+        <!-- Following Card END -->
+      </div>
+      <!-- Right sidebar END -->
+
+    </div> <!-- Row END -->
+  </div>
+  <!-- Container END -->
+
+</main>
+<!-- **************** MAIN CONTENT END **************** -->
+
+<!-- Bootstrap JS -->
+<script src="assets/vendor/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Theme Functions -->
+<script src="assets/js/functions.js"></script>
+
+<!-- Custom profile script -->
+<script src="profile.js"></script>
+ 
 </body>
 </html>
