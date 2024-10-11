@@ -169,49 +169,36 @@ function setupWebSocket(roomId) {
         const data = JSON.parse(e.data);
         console.log('WebSocket message received:', data);
         if (data.message) {
+            console.log('Calling addMessage from WebSocket');
             addMessage({
                 id: data.id,
                 content: data.message,
                 sender: data.sender,
                 image: data.image,
-                sent_at: data.sent_at || new Date().toISOString(), // 현재 시간을 사용
+                sent_at: data.sent_at || new Date().toISOString(),
                 is_read: data.is_read
             });
         }
     };
 
-    socket.onclose = function(e) {
-        console.error('Chat socket closed unexpectedly');
-        showErrorMessage('채팅 연결이 끊겼습니다. 페이지를 새로고침해 주세요.');
+    socket.onopen = function(e) {
+        console.log('WebSocket connection established');
+    };
+
+    socket.onerror = function(e) {
+        console.error('WebSocket error:', e);
     };
 }
 
-function addMessage({ content, sender, image, sent_at, is_read }) {
-    console.log('Adding message:', { content, sender, image, sent_at, is_read });
+function addMessage({ id, content, sender, image, sent_at, is_read }) {
+    console.log('Adding message:', { id, content, sender, image, sent_at, is_read });
     const messagesContainer = document.getElementById('messages');
     const messageElement = document.createElement('div');
     const isSentByCurrentUser = sender && sender.id === currentUserId;
     messageElement.className = `d-flex ${isSentByCurrentUser ? 'justify-content-end' : 'justify-content-start'} mb-3`;
     
-    let formattedDate = 'Invalid Date';
-    if (sent_at) {
-        try {
-            const date = new Date(sent_at);
-            
-            if (!isNaN(date.getTime())) {
-                formattedDate = date.toLocaleString();
-            } else {
-                console.error('Invalid date:', sent_at);
-                formattedDate = new Date().toLocaleString(); // 현재 시간을 사용
-            }
-        } catch (error) {
-            console.error('Error parsing date:', sent_at, error);
-            formattedDate = new Date().toLocaleString(); // 현재 시간을 사용
-        }
-    } else {
-        console.warn('sent_at is undefined or null, using current time');
-        formattedDate = new Date().toLocaleString(); // 현재 시간을 사용
-    }
+    // 날짜 포맷팅
+    const formattedDate = sent_at ? new Date(sent_at).toLocaleString() : 'Unknown Date';
     
     // 읽음 상태 아이콘 추가
     const readStatusIcon = isSentByCurrentUser ? 
@@ -236,6 +223,7 @@ function addMessage({ content, sender, image, sent_at, is_read }) {
     `;
     
     messagesContainer.appendChild(messageElement);
+    console.log('Message added to DOM');
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
 
@@ -249,27 +237,11 @@ async function sendMessage(content) {
         console.log('Sending message:', content);
         const response = await fetchWithCSRF(`${API_BASE_URL}/chat/${currentRoomId}/messages/send/`, 'POST', { content });
         
-        console.log('Server response:', response); // 서버 응답 전체를 로깅
+        console.log('Server response:', response);
 
         if (response && response.id) {
             document.getElementById('message-input').value = '';
-            addMessage({
-                id: response.id,
-                content: response.content,
-                sender: response.sender,
-                image: response.image,
-                sent_at: response.sent_at,
-                is_read: response.is_read
-            });
-
-            // WebSocket을 통해 메시지 전송
-            if (socket && socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({
-                    type: 'chat_message',
-                    message: content,
-                    room_id: currentRoomId
-                }));
-            }
+            console.log('Message sent successfully, waiting for WebSocket broadcast');
         } else {
             throw new Error('Message not saved properly');
         }
