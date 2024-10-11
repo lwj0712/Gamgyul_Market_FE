@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const signOutLink = document.getElementById('sign-out-link');
     const viewProfileLink = document.getElementById('view-profile-link');
     const profileSettingsLink = document.getElementById('profile-settings-link');
+    const postList = document.getElementById('post-list');
 
     // State
     const urlParams = new URLSearchParams(window.location.search);
@@ -109,6 +110,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateEmailDisplay(profileData);
         renderFollowersList(profileData.followers || []);
         renderFollowingList(profileData.following || []);
+        renderPostList(profileData.posts || []);
         renderProductList(profileData.products || []);
         updateProfileButtons(profileData.is_self);
     
@@ -230,6 +232,37 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </li>
         `;
+    }
+
+    // 새로운 함수 추가
+    function renderPostList(posts) {
+        if (posts && posts.length > 0) {
+            const postListHtml = posts.map(post => `
+                <div class="col-sm-6 col-lg-4">
+                    <div class="card h-100">
+                        <div class="position-relative">
+                            <img src="${post.images[0] || DEFAULT_PROFILE_IMAGE}" class="card-img-top" alt="게시물 이미지">
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title">${post.content.substring(0, 50)}${post.content.length > 50 ? '...' : ''}</h5>
+                            <p class="small"><i class="bi bi-calendar-event me-2"></i>${new Date(post.created_at).toLocaleDateString()}</p>
+                            <ul class="nav nav-stack py-3 small">
+                                <li class="nav-item">
+                                    <i class="bi bi-heart-fill me-1"></i>${post.likes_count || 0}
+                                </li>
+                                <li class="nav-item ms-sm-auto">
+                                    <i class="bi bi-chat-left-text-fill me-1"></i>${post.comments.length || 0}
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            postList.innerHTML = postListHtml;
+        } else {
+            postList.innerHTML = '<p class="col-12">등록된 게시물이 없습니다.</p>';
+        }
     }
 
     // Product Functions
