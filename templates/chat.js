@@ -5,6 +5,7 @@ const DEFAULT_PROFILE_IMAGE = '/templates/images/team_profile.png';
 let currentUserId;
 let currentRoomId;
 let socket;
+let notifications = [];
 
 // Utility Functions
 function getCurrentUsername() {
@@ -47,7 +48,6 @@ async function fetchWithCSRF(url, method = 'GET', body = null) {
     return await response.json();
 }
 
-
 function getFullImageUrl(imageUrl) {
     if (!imageUrl) return DEFAULT_PROFILE_IMAGE;
     if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
@@ -61,10 +61,11 @@ function showErrorMessage(message) {
     // TODO: Implement UI error message display
 }
 
+// Chat Functions
 async function getChatRooms() {
     try {
         const response = await fetchWithCSRF(`${API_BASE_URL}/chat/`);
-        console.log('Chat rooms response:', response); // 전체 응답 로깅
+        console.log('Chat rooms response:', response);
         if (response && Array.isArray(response.results)) {
             displayChatRooms(response.results);
         } else if (Array.isArray(response)) {
@@ -87,7 +88,6 @@ function displayChatRooms(chatRooms) {
         const roomElement = document.createElement('li');
         roomElement.setAttribute('data-bs-dismiss', 'offcanvas');
 
-        // 참가자 정보 추출
         const participants = room.participants || [];
         const otherUser = participants.find(user => user.username !== getCurrentUsername()) || {};
         const username = otherUser.username || room.name || 'Unknown User';
@@ -148,7 +148,7 @@ async function openChatRoom(roomId) {
             });
         });
         
-        setupWebSocket(roomId);
+        setupChatWebSocket(roomId);
         currentRoomId = roomId;
 
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -158,7 +158,7 @@ async function openChatRoom(roomId) {
     }
 }
 
-function setupWebSocket(roomId) {
+function setupChatWebSocket(roomId) {
     if (socket) {
         socket.close();
     }
@@ -197,10 +197,8 @@ function addMessage({ id, content, sender, image, sent_at, is_read }) {
     const isSentByCurrentUser = sender && sender.id === currentUserId;
     messageElement.className = `d-flex ${isSentByCurrentUser ? 'justify-content-end' : 'justify-content-start'} mb-3`;
     
-    // 날짜 포맷팅
     const formattedDate = sent_at ? new Date(sent_at).toLocaleString() : 'Unknown Date';
     
-    // 읽음 상태 아이콘 추가
     const readStatusIcon = isSentByCurrentUser ? 
     `<i class="bi ${is_read ? 'bi-check-all text-primary' : 'bi-check'} ms-1"></i>` : '';
 
@@ -335,7 +333,138 @@ async function startChatWithUser(user) {
     }
 }
 
-// 프로필 관련 함수
+// Notification Functions
+async function fetchCurrentUserInfo() {
+    try {
+        const userData = await fetchWithCSRF(`${API_BASE_URL}/accounts/current-user/`);
+        currentUserId = userData.id;
+        return userData;
+    } catch (error) {
+        console.error('Error fetching current user info:', error);
+        showErrorMessage('사용자 정보를 불러오는 데 실패했습니다.');
+    }
+}
+
+function updateNotificationCount() {
+    const notificationCount = document.getElementById('notification-count');
+    const notificationBadge = document.getElementById('notification-badge');
+    const count = notifications.length;
+    if (notificationCount) notificationCount.textContent = count;
+    if (notificationBadge) notificationBadge.style.display = count > 0 ? 'inline' : 'none';
+}
+
+function renderNotifications() {
+    console.log('Notifications data:', notifications);
+
+    if (!Array.isArray(notifications)) {
+        console.error('notifications is not an array:', notifications);
+        return;
+    }
+
+    const notificationList = document.getElementById('notification-list');
+    if (!notificationList) {
+        console.error('Notification list element not found');
+        return;
+    }
+
+    notificationList.innerHTML = '';
+    notifications.forEach((notification) => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+            <div class="list-group-item list-group-item-action rounded d-flex border-0 mb-1 p-3">
+                <div class="avatar text-center d-none d-sm-inline-block">
+                    <img class="avatar-img rounded-circle" src="${getFullImageUrl(notification.sender.profile_image)}" alt="">
+                </div>
+                <div class="ms-sm-3 d-flex">
+                    <div>
+                        <p class="small mb-2">${notification.message}</p>
+                        <p class="small ms-3">${new Date(notification.created_at).toLocaleString()}</p>
+                    </div>
+                    <button class="btn btn-sm btn-danger-soft ms-auto" onclick="deleteNotification('${notification.id}')">삭제</button>
+                </div>
+            </div>
+        `;
+        notificationList.appendChild(li);
+    });
+    updateNotificationCount();
+}
+
+async function fetchNotifications() {
+    try {
+        const response = await fetchWithCSRF(`${API_BASE_URL}/alarm/`);
+        const data = await response.json();
+        console.log('Server response:', data);
+        
+        notifications = Array.isArray(data) ? data : (data.results || []);
+        
+        renderNotifications();
+    } catch (error) {
+        console.error('Error fetching notifications:', error);
+        showErrorMessage('알림을 불러오는 데 실패했습니다.');
+    }
+}
+
+async function deleteNotification(notificationId) {
+    try {
+        const response = await fetchWithCSRF(`${API_BASE_URL}/alarm/${notificationId}/delete/`, 'DELETE');
+        if (response.ok) {
+            notifications = notifications.filter(n => n.id !== notificationId);
+            renderNotifications();
+        } else {
+            throw new Error('알림 삭제 실패');
+        }
+    } catch (error) {
+        console.error('Error deleting notification:', error);
+        showErrorMessage('알림 삭제 중 오류가 발생했습니다.');
+    }
+}
+
+async function clearAllNotifications() {
+    try {
+        const response = await fetchWithCSRF(`${API_BASE_URL}/alarm/delete-all/`, 'DELETE');
+        if (response.ok) {
+            notifications = [];
+            renderNotifications();
+        } else {
+            throw new Error('모든 알림 삭제 실패');
+        }
+    } catch (error) {
+        console.error('Error clearing all notifications:', error);
+        showErrorMessage('모든 알림 삭제 중 오류가 발생했습니다.');
+    }
+}
+
+function setupNotificationWebSocket() {
+    if (!currentUserId) {
+        console.error('Current user ID is not available');
+        return;
+    }
+
+    const notificationSocket = new WebSocket(`ws://${API_BASE_URL.replace('http://', '')}/ws/alarm/${currentUserId}/`);
+
+    notificationSocket.onopen = function(e) {
+        console.log('Notification WebSocket 연결 성공');
+    };
+
+    notificationSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        if (data.alarm) {
+            notifications.unshift(data.alarm);
+            renderNotifications();
+        }
+    };
+
+    notificationSocket.onclose = function(e) {
+        console.error('Alarm socket closed unexpectedly');
+        setTimeout(() => setupNotificationWebSocket(), 5000);
+    };
+
+    notificationSocket.onerror = function(e) {
+        console.error('WebSocket error occurred', e);
+    };
+}
+
+// Profile Functions
 function updateProfileDropdown(profileData) {
     const navProfileImage = document.getElementById('nav-profile-image');
     const dropdownProfileImage = document.getElementById('dropdown-profile-image');
@@ -400,14 +529,36 @@ function initializeDropdowns() {
     })
 }
 
-// 이벤트 리스너 및 초기화
+// Main initialization function
+async function init() {
+    try {
+        const userData = await fetchCurrentUserInfo();
+        if (userData) {
+            updateProfileDropdown(userData);
+            setupNotificationWebSocket();
+            await fetchNotifications();
+            await getChatRooms();
+            await loadLoggedInUserProfile();
+        } else {
+            throw new Error('Failed to initialize user data');
+        }
+    } catch (error) {
+        console.error('Error initializing application:', error);
+        showErrorMessage('애플리케이션을 초기화하는 데 실패했습니다.');
+        alert('세션이 만료되었거나 로그인이 필요합니다. 로그인 페이지로 이동합니다.');
+        window.location.href = '/templates/login.html';
+    }
+}
+
+// Event Listeners
 document.addEventListener('DOMContentLoaded', function() {
     const userSearchInput = document.getElementById('userSearchInput');
     const messageForm = document.getElementById('message-form');
     const signOutLink = document.getElementById('sign-out-link');
     const messageSearchInput = document.getElementById('messageSearchInput');
-    messageSearchInput.addEventListener('input', debounce(handleMessageSearch, 300));
+    const clearAllNotificationsBtn = document.getElementById('clear-all-notifications');
 
+    messageSearchInput.addEventListener('input', debounce(handleMessageSearch, 300));
     userSearchInput.addEventListener('input', debounce(handleSearch, 300));
     
     messageForm.addEventListener('submit', function(e) {
@@ -422,11 +573,19 @@ document.addEventListener('DOMContentLoaded', function() {
         signOutLink.addEventListener('click', handleLogout);
     }
 
+    if (clearAllNotificationsBtn) {
+        clearAllNotificationsBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            clearAllNotifications();
+        });
+    }
+
     document.addEventListener('click', function(event) {
         if (!event.target.closest('#searchResults') && !event.target.closest('#userSearchInput')) {
             document.getElementById('searchResults').style.display = 'none';
         }
     });
+
     const messageSearchForm = document.getElementById('message-search-container');
     messageSearchForm.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -435,8 +594,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     initializeDropdowns();
     init();
+
+    // 주기적으로 알림 업데이트 (선택사항)
+    setInterval(fetchNotifications, 60000); // 1분마다 업데이트
 });
 
+// Utility function
 function debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {
@@ -448,7 +611,8 @@ function debounce(func, wait) {
         timeout = setTimeout(later, wait);
     };
 }
-// 메시지 검색 함수
+
+// Message search function
 async function handleMessageSearch() {
     const query = document.getElementById('messageSearchInput').value.trim();
     if (query && currentRoomId) {
@@ -457,7 +621,6 @@ async function handleMessageSearch() {
             if (response && (Array.isArray(response.results) || Array.isArray(response))) {
                 displayMessageSearchResults(Array.isArray(response) ? response : response.results);
             } else if (response && response.message) {
-                // 검색 결과가 없는 경우
                 displayMessageSearchResults([]);
             } else {
                 console.error('Unexpected message search results format:', response);
@@ -468,18 +631,17 @@ async function handleMessageSearch() {
             showErrorMessage('메시지 검색 중 오류가 발생했습니다.');
         }
     } else {
-        document.getElementById('messages').innerHTML = ''; // 검색 결과 초기화
-        // 기존 메시지 다시 로드
+        document.getElementById('messages').innerHTML = '';
         if (currentRoomId) {
             openChatRoom(currentRoomId);
         }
     }
 }
 
-// 메시지 검색 결과 표시 함수
+// Display message search results
 function displayMessageSearchResults(results) {
     const messagesContainer = document.getElementById('messages');
-    messagesContainer.innerHTML = ''; // 기존 메시지 초기화
+    messagesContainer.innerHTML = '';
 
     if (results.length === 0) {
         messagesContainer.innerHTML = '<p class="text-center">검색 결과가 없습니다.</p>';
@@ -499,22 +661,8 @@ function displayMessageSearchResults(results) {
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
 
-async function init() {
-    try {
-        const user = await fetchWithCSRF(`${API_BASE_URL}/accounts/current-user/`);
-        if (user && user.id) {
-            currentUserId = user.id;
-            await getChatRooms();
-            await loadLoggedInUserProfile();
-        } else {
-            throw new Error('Failed to get current user information');
-        }
-    } catch (error) {
-        console.error('Error initializing application:', error);
-        showErrorMessage('애플리케이션을 초기화하는 데 실패했습니다.');
-        alert('세션이 만료되었거나 로그인이 필요합니다. 로그인 페이지로 이동합니다.');
-        window.location.href = '/templates/login.html';
-    }
-}
+// Global scope functions
+window.deleteNotification = deleteNotification;
 
+// Initialize the application
 init();
