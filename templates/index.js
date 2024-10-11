@@ -1,188 +1,127 @@
 document.addEventListener('DOMContentLoaded', function() {
     const userInfo = document.getElementById('user-info');
     const loginLink = document.getElementById('login-link');
-    const usernameSpan = document.getElementById('username');
-    const profileLink = document.getElementById('profile-link');
+    const username = document.getElementById('username');
     const logoutBtn = document.getElementById('logout-btn');
+    const createPostBtn = document.getElementById('create-post-btn');
     const postList = document.getElementById('post-list');
-    const friendRecommendations = document.getElementById('friend-recommendations');
+    const loadMoreBtn = document.getElementById('load-more-btn');
+    const urlParams = new URLSearchParams(window.location.search);
+    const shouldRefresh = urlParams.get('refresh');
 
-    // 사용자 인증
+    if (shouldRefresh === 'true') {
+        loadPosts(true);
+    }
+    let offset = 0;
+    const limit = 10;
+
     async function checkAuth() {
         try {
             const response = await fetch('http://127.0.0.1:8000/accounts/current-user/', {
                 method: 'GET',
+                credentials: 'include',
                 headers: {
                     'X-CSRFToken': getCSRFToken(),
-                },
-                credentials: 'include'
+                }
             });
-    
+
             if (response.ok) {
                 const userData = await response.json();
-                if (userInfo) userInfo.style.display = 'block';
-                if (loginLink) loginLink.style.display = 'none';
-                if (usernameSpan) usernameSpan.textContent = userData.username;
-                if (profileLink) profileLink.href = `/templates/profile.html?username=${userData.username}`;
+                userInfo.style.display = 'block';
+                loginLink.style.display = 'none';
+                username.textContent = userData.username;
+                createPostBtn.style.display = 'block';
             } else {
-                if (userInfo) userInfo.style.display = 'none';
-                if (loginLink) loginLink.style.display = 'block';
+                userInfo.style.display = 'none';
+                loginLink.style.display = 'block';
+                createPostBtn.style.display = 'none';
             }
         } catch (error) {
-            console.error('인증 확인 중 오류 발생:', error);
-            if (userInfo) userInfo.style.display = 'none';
-            if (loginLink) loginLink.style.display = 'block';
+            console.error('Auth check error:', error);
         }
-        // 인증 상태와 관계없이 게시물을 로드합니다.
-        loadPosts();
     }
 
-    // 게시물 목록 불러오기
-    async function loadPosts() {
+    async function loadPosts(refresh = false) {
         try {
-            const response = await fetch('http://127.0.0.1:8000/insta/posts/', {
+            if (refresh) {
+                offset = 0;
+                postList.innerHTML = '';
+            }
+
+            const response = await fetch(`http://127.0.0.1:8000/insta/posts/?limit=${limit}&offset=${offset}`, {
                 method: 'GET',
-                credentials: 'include'
+                credentials: 'include',
+                headers: {
+                    'X-CSRFToken': getCSRFToken(),
+                    'Cache-Control': 'no-cache',
+                }
             });
 
             if (response.ok) {
-                const postsData = await response.json();
-                displayPosts(postsData.results);
+                const data = await response.json();
+                displayPosts(data.results);
+                offset += data.results.length;
+                if (!data.next) {
+                    loadMoreBtn.style.display = 'none';
+                } else {
+                    loadMoreBtn.style.display = 'block';
+                }
             } else {
-                console.error('게시물 불러오기 실패');
-                postList.innerHTML = '<p>게시물을 불러오는데 실패했습니다.</p>';
+                console.error('Failed to load posts');
             }
         } catch (error) {
-            console.error('게시물 불러오기 중 오류 발생:', error);
-            postList.innerHTML = '<p>게시물을 불러오는데 실패했습니다.</p>';
+            console.error('Error loading posts:', error);
         }
     }
 
-    // 게시물 표시
     function displayPosts(posts) {
-        postList.innerHTML = '';
-        if (posts && posts.length > 0) {
-            posts.forEach(post => {
-                const postElement = document.createElement('article');
-                postElement.innerHTML = `
-                    <h2>${post.user.username}</h2>
-                    <p>${post.content}</p>
-                    ${post.images && post.images.length > 0 ? `<img src="${post.images[0]}" alt="Post image" style="max-width: 100%;">` : ''}
-                    <p>좋아요: ${post.likes_count}</p>
-                `;
-                postList.appendChild(postElement);
-            });
-        } else {
-            postList.innerHTML = '<p>표시할 게시물이 없습니다.</p>';
-        }
-    }
-
-    // 로그아웃
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', async function(e) {
-            e.preventDefault();
-            try {
-                const response = await fetch('http://127.0.0.1:8000/accounts/logout/', {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: {
-                        'X-CSRFToken': getCSRFToken()
-                    }
-                });
-        
-                if (response.ok) {
-                    window.location.reload();
-                } else {
-                    console.error('로그아웃 실패');
-                }
-            } catch (error) {
-                console.error('로그아웃 중 오류 발생:', error);
-            }
+        posts.forEach(post => {
+            const postElement = document.createElement('article');
+            postElement.innerHTML = `
+                <h2>${post.user.username}</h2>
+                <p>${post.content}</p>
+                <p>Location: ${post.location || 'Not specified'}</p>
+                <p>Tags: ${post.tags.join(', ') || 'No tags'}</p>
+                ${post.images && post.images.length > 0 ? `<img src="${post.images[0]}" alt="Post image" style="max-width: 300px;">` : ''}
+                <p>Likes: ${post.likes_count}</p>
+                <button class="like-btn" data-post-id="${post.id}">Like</button>
+                <p>Created at: ${new Date(post.created_at).toLocaleString()}</p>
+            `;
+            postList.appendChild(postElement);
         });
     }
-    
-    // CSRF 토큰 가져오기
+
+    logoutBtn.addEventListener('click', async function() {
+        try {
+            const response = await fetch('http://127.0.0.1:8000/accounts/logout/', {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'X-CSRFToken': getCSRFToken(),
+                }
+            });
+
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                console.error('Logout failed');
+            }
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
+    });
+
+    createPostBtn.addEventListener('click', function() {
+        window.location.href = 'post-create.html';
+    });
+
+    loadMoreBtn.addEventListener('click', () => loadPosts());
+
     function getCSRFToken() {
         return document.cookie.split('; ')
             .find(row => row.startsWith('csrftoken='))
             ?.split('=')[1] || '';
     }
 
-    // 친구 추천 목록 불러오기
-    async function loadFriendRecommendations() {
-        try {
-            const response = await fetch('http://127.0.0.1:8000/accounts/recommend/', {
-                method: 'GET',
-                credentials: 'include'
-            });
-
-            if (response.ok) {
-                const recommendationsData = await response.json();
-                displayFriendRecommendations(recommendationsData);
-            } else {
-                console.error('친구 추천 목록 불러오기 실패');
-                friendRecommendations.innerHTML = '<p>친구 추천 목록을 불러오는데 실패했습니다.</p>';
-            }
-        } catch (error) {
-            console.error('친구 추천 목록 불러오기 중 오류 발생:', error);
-            friendRecommendations.innerHTML = '<p>친구 추천 목록을 불러오는데 실패했습니다.</p>';
-        }
-    }
-
-    // 친구 추천 표시
-    function displayFriendRecommendations(recommendations) {
-        friendRecommendations.innerHTML = '';
-        if (recommendations && recommendations.length > 0) {
-            recommendations.forEach(user => {
-                const userElement = document.createElement('div');
-                userElement.className = 'friend-recommendation';
-                userElement.innerHTML = `
-                    <img src="${user.profile_image || '/path/to/default/image.jpg'}" alt="${user.username}" style="width: 50px; height: 50px; border-radius: 50%;">
-                    <span>${user.username}</span>
-                    <button class="follow-btn" data-user-id="${user.id}">팔로우</button>
-                `;
-                friendRecommendations.appendChild(userElement);
-            });
-            addFollowButtonListeners();
-        } else {
-            friendRecommendations.innerHTML = '<p>추천할 친구가 없습니다.</p>';
-        }
-    }
-
-    // 팔로우 버튼에 이벤트 리스너 추가
-    function addFollowButtonListeners() {
-        const followButtons = document.querySelectorAll('.follow-btn');
-        followButtons.forEach(button => {
-            button.addEventListener('click', async function() {
-                const userId = this.getAttribute('data-user-id');
-                try {
-                    const response = await fetch(`http://127.0.0.1:8000/accounts/follow/${userId}/`, {
-                        method: 'POST',
-                        credentials: 'include',
-                        headers: {
-                            'X-CSRFToken': getCSRFToken()
-                        }
-                    });
-
-                    if (response.ok) {
-                        this.textContent = '팔로잉';
-                        this.disabled = true;
-                    } else {
-                        console.error('팔로우 실패');
-                    }
-                } catch (error) {
-                    console.error('팔로우 중 오류 발생:', error);
-                }
-            });
-        });
-    }
-
-    // 초기 실행
-    async function init() {
-        await checkAuth();
-        loadPosts();
-        if (userInfo && userInfo.style.display === 'block') {
-            loadFriendRecommendations();
-        }
-    }
+    checkAuth();
 });
