@@ -1,52 +1,27 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>감귤하우스 - 메인</title>
-    <style>
-        .container {
-            display: flex;
-        }
-        #post-list {
-            flex: 2;
-        }
-        #sidebar {
-            flex: 1;
-            padding: 20px;
-        }
-        .friend-recommendation {
-            margin-bottom: 10px;
-        }
-    </style>
+    <title>Instagram-style Posts</title>
 </head>
 <body>
-    <nav id="main-nav">
-        <h1>감귤하우스</h1>
-        <div id="user-info" style="display: none;">
-            <span id="username"></span>
-            <a href="#" id="profile-link">프로필</a>
-            <button id="logout-btn">로그아웃</button>
-        </div>
-        <div id="login-link" style="display: none;">
-            <a href="/templates/login.html">로그인</a>
-        </div>
-    </nav>
-
-    <div class="container">
-        <main>
-            <section id="post-list">
-                <!-- 게시물 목록이 여기에 동적으로 추가됩니다 -->
-            </section>
-        </main>
-
-        <aside id="sidebar">
-            <h2>친구 추천</h2>
-            <div id="friend-recommendations">
-                <!-- 추천 친구 목록이 여기에 동적으로 추가됩니다 -->
+    <header>
+        <h1>Instagram-style Posts</h1>
+        <nav>
+            <div id="user-info" style="display: none;">
+                <span id="username"></span>
+                <button id="logout-btn">Logout</button>
             </div>
-        </aside>
-    </div>
+            <a id="login-link" href="login.html">Login</a>
+            <button id="create-post-btn" style="display: none;">Create Post</button>
+        </nav>
+    </header>
+
+    <main>
+        <section id="post-list"></section>
+        <button id="load-more-btn">Load More</button>
+    </main>
 
     <script src="index.js"></script>
 </body>
