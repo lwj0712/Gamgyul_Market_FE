@@ -12,7 +12,7 @@
 	<!-- Dark mode -->
 	<script>
 		const storedTheme = localStorage.getItem('theme')
- 
+
 		const getPreferredTheme = () => {
 			if (storedTheme) {
 				return storedTheme
@@ -210,183 +210,152 @@ Header END -->
 
 <!-- **************** MAIN CONTENT START **************** -->
 <main>
-				<!-- Share feed START -->
-				<div class="card card-body my-3" style="margin-left: 200px; margin-right: 200px;">
-					<div class="d-flex mb-3">
-						<!-- Avatar -->
-						<div class="avatar avatar-xs me-2">
-							<a href="#"> <img class="avatar-img rounded-circle" src="assets/images/avatar/03.jpg" alt=""> </a>
-						</div>
-						<!-- Post input -->
-						<form class="w-100">
-							<textarea class="form-control pe-4 border-0" rows="10" data-autoresize placeholder="Share your thoughts..." ></textarea>
-						</form>
-					</div>
-					<!-- Share feed toolbar START -->
-					<ul class="nav nav-pills nav-stack small fw-normal">
-						<li class="nav-item">
-							<a class="nav-link bg-light py-1 px-2 mb-0" href="#!" data-bs-toggle="modal" data-bs-target="#feedActionPhoto"> <i class="bi bi-image-fill text-success pe-2"></i>Photo</a>
-						</li>
-						<li class="nav-item">
-							<a class="nav-link bg-light py-1 px-2 mb-0" href="#!" data-bs-toggle="modal" data-bs-target="#feedActionVideo"> <i class="bi bi-camera-reels-fill text-info pe-2"></i>Video</a>
-						</li>
-						<li class="nav-item">
-							<a href="#" class="nav-link bg-light py-1 px-2 mb-0" data-bs-toggle="modal" data-bs-target="#modalCreateEvents"> <i class="bi bi-calendar2-event-fill text-danger pe-2"></i>Event </a>
-						</li>
-						<li class="nav-item">
-							<a class="nav-link bg-light py-1 px-2 mb-0" href="#!" data-bs-toggle="modal" data-bs-target="#modalCreateFeed"> <i class="bi bi-emoji-smile-fill text-warning pe-2"></i>Feeling /Activity</a>
-						</li>
-						<li class="nav-item dropdown ms-lg-auto">
-							<a class="nav-link bg-light py-1 px-2 mb-0" href="#" id="feedActionShare" data-bs-toggle="dropdown" aria-expanded="false">
-								<i class="bi bi-three-dots"></i>
-							</a>
-							<!-- Dropdown menu -->
-							<ul class="dropdown-menu dropdown-menu-end" aria-labelledby="feedActionShare">
-								<li><a class="dropdown-item" href="#"> <i class="bi bi-envelope fa-fw pe-2"></i>Create a poll</a></li>
-								<li><a class="dropdown-item" href="#"> <i class="bi bi-bookmark-check fa-fw pe-2"></i>Ask a question </a></li>
-								<li><hr class="dropdown-divider"></li>
-								<li><a class="dropdown-item" href="#"> <i class="bi bi-pencil-square fa-fw pe-2"></i>Help</a></li>
-							</ul>
-						</li>
-					</ul>
-					<!-- Share feed toolbar END -->
-				</div>
-				<!-- Share feed END -->
+  <!-- Share feed START -->
+  <div class="card card-body my-3" style="margin-left: 100px; margin-right: 100px;">
+      <div class="d-flex mb-3">
+          <form id="postForm" class="row g-4 w-100">
+              <textarea id="content" class="form-control pe-4 border-0" rows="10" data-autoresize placeholder="하고 싶은 말을 자유롭게 작성해 주세요:)" required aria-label="글 내용"></textarea>
+          </form>
+      </div>
+      <!-- Share feed toolbar START -->
+      <ul class="nav nav-pills nav-stack small fw-normal">
+        <li class="nav-item">
+          <input type="file" accept="image/*" id="imageUpload" style="display: none;" mjltiple />
+          <label for="imageUpload" class="nav-link bg-light py-1 px-2 mb-0" style="cursor: pointer;">
+              <i class="bi bi-image-fill"></i> 이미지 추가
+          </label>
+        </li>
+          <!-- 추가적인 기능 아이콘들 -->
+      </ul>
+      <div id='fileList' class='mt-2'></div>
+      <!-- Share feed toolbar END -->
+  </div>
 
-<!-- Modal create Feed photo START -->
-<div class="modal fade" id="feedActionPhoto" tabindex="-1" aria-labelledby="feedActionPhotoLabel" aria-hidden="true">
-	<div class="modal-dialog modal-dialog-centered">
-		<div class="modal-content">
-			<!-- Modal feed header START -->
-			<div class="modal-header">
-				<h5 class="modal-title" id="feedActionPhotoLabel">Add post photo</h5>
-				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-			</div>
-			<!-- Modal feed header END -->
-
-				<!-- Modal feed body START -->
-				<div class="modal-body">
-				<!-- Add Feed -->
-				<div class="d-flex mb-3">
-					<!-- Avatar -->
-					<div class="avatar avatar-xs me-2">
-						<img class="avatar-img rounded-circle" src="assets/images/avatar/03.jpg" alt="">
-					</div>
-					<!-- Feed box  -->
-					<form class="w-100">
-						<textarea class="form-control pe-4 fs-3 lh-1 border-0" rows="2" placeholder="Share your thoughts..."></textarea>
-					</form>
-				</div>
-
-				<!-- Dropzone photo START -->
-				<div>
-					<label class="form-label">Upload attachment</label>
-					<div class="dropzone dropzone-default card shadow-none" data-dropzone='{"maxFiles":2}'>
-						<div class="dz-message">
-							<i class="bi bi-images display-3"></i>
-							<p>Drag here or click to upload photo.</p>
-						</div>
-					</div>
-				</div>
-				<!-- Dropzone photo END -->
-
-				</div>
-				<!-- Modal feed body END -->
-
-				<!-- Modal feed footer -->
-				<div class="modal-footer ">
-					<!-- Button -->
-						<button type="button" class="btn btn-danger-soft me-2" data-bs-dismiss="modal">Cancel</button>
-						<button type="button" class="btn btn-success-soft">Post</button>
-				</div>
-				<!-- Modal feed footer -->
-		</div>
-	</div>
-</div>
-<!-- Modal create Feed photo END -->
-<form class="row g-4">
-    <!-- Title -->
-    <div class="col-12">
-        <label class="form-label">Title</label>
-        <input type="email" class="form-control" placeholder="Event name here">
-    </div>
-    <!-- Description -->
-    <div class="col-12">
-        <label class="form-label">Description</label>
-        <textarea class="form-control" rows="2" placeholder="Ex: topics, schedule, etc."></textarea>
-    </div>
-    <!-- Date -->
-    <div class="col-sm-4">
-        <label class="form-label">Date</label>
-        <input type="text" class="form-control flatpickr" placeholder="Select date">
-    </div>
-    <!-- Time -->
-    <div class="col-sm-4">
-        <label class="form-label">Time</label>
-        <input type="text" class="form-control flatpickr" data-enableTime="true" data-noCalendar="true" placeholder="Select time">
-    </div>
-    <!-- Duration -->
-    <div class="col-sm-4">
-        <label class="form-label">Duration</label>
-        <input type="email" class="form-control" placeholder="1hr 23m">
-    </div>
-    <!-- Location -->
-    <div class="col-12">
-        <label class="form-label">Location</label>
-        <input type="email" class="form-control" placeholder="Logansport, IN 46947">
-    </div>
-    <!-- Add guests -->
-    <div class="col-12">
-        <label class="form-label">Add guests</label>
-        <input type="email" class="form-control" placeholder="Guest email">
-    </div>
-    <!-- Avatar group START -->
-    <div class="col-12 mt-3">
-        <ul class="avatar-group list-unstyled align-items-center mb-0">
-            <li class="avatar avatar-xs">
-                <img class="avatar-img rounded-circle" src="assets/images/avatar/01.jpg" alt="avatar">
-            </li>
-            <li class="avatar avatar-xs">
-                <img class="avatar-img rounded-circle" src="assets/images/avatar/02.jpg" alt="avatar">
-            </li>
-            <li class="avatar avatar-xs">
-                <img class="avatar-img rounded-circle" src="assets/images/avatar/03.jpg" alt="avatar">
-            </li>
-            <li class="avatar avatar-xs">
-                <img class="avatar-img rounded-circle" src="assets/images/avatar/04.jpg" alt="avatar">
-            </li>
-            <li class="avatar avatar-xs">
-                <img class="avatar-img rounded-circle" src="assets/images/avatar/05.jpg" alt="avatar">
-            </li>
-            <li class="avatar avatar-xs">
-                <img class="avatar-img rounded-circle" src="assets/images/avatar/06.jpg" alt="avatar">
-            </li>
-            <li class="avatar avatar-xs">
-                <img class="avatar-img rounded-circle" src="assets/images/avatar/07.jpg" alt="avatar">
-            </li>
-            <li class="ms-3">
-                <small> +50 </small>
-            </li>
-        </ul>
-    </div>
-    <!-- Upload Photos or Videos -->
-    <!-- Dropzone photo START -->
-    <div>
-        <label class="form-label">Upload attachment</label>
-        <div class="dropzone dropzone-default card shadow-none" data-dropzone='{"maxFiles":2}'>
-            <div class="dz-message">
-                <i class="bi bi-file-earmark-text display-3"></i>
-                <p>Drop presentation and document here or click to upload.</p>
-            </div>
-        </div>
-    </div>
-    <!-- Dropzone photo END -->
-</form>
-<!-- Form END -->
+  <!-- Form for additional details -->
+  <form id= "postForm" class="row g-4 w-100"> 
+    <div class="card card-body my-3" style="margin-left: 110px; margin-right: 90px;">
+      <!-- Location -->
+      <div class="col-12 mb-3">
+          <label for="location" class="form-label pe-4 border-0" rows='4'>위치</label>
+          <input id="location" type="text" class="form-control" placeholder="위치를 입력하세요.">
+      </div>
+      <!-- Tags -->
+      <div class="col-12 mb-3">
+          <label for="tags" class="form-label">태그</label>
+          <input id="tags" type="text" class="form-control" placeholder="태그는 쉼표로 구분합니다.">
+      </div>
+      <!-- Submit Button -->
+      <div class="col-12 text-end">
+          <button type="submit" class="btn btn-primary">작성</button>
+      </div>
+  </form>
+  <!-- Form END -->
 </main>
+
 <!-- **************** MAIN CONTENT END **************** -->
+
+
+
 <script src="assets/vendor/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 <script src="index-main.js"></script>
 <script src='header.js'></script>
+<script src='post-create.js'></script>
+<script>
+  let imageFiles = [];
+
+  // DOM이 완전히 로드된 후 실행
+  document.addEventListener('DOMContentLoaded', function() {
+      console.log('DOM 로드 완료, 이벤트 리스너 등록 시작.');
+
+      // 이미지 업로드 핸들러
+      document.getElementById('imageUpload').addEventListener('change', function(event) {
+          console.log('이미지 선택 이벤트 발생');
+          const selectedFiles = Array.from(event.target.files);  
+          const totalFiles = imageFiles.length + selectedFiles.length;
+
+          if (totalFiles > 10) {
+              alert('최대 10개의 이미지만 첨부할 수 있습니다.');
+              return;
+          }
+
+          imageFiles = [...imageFiles, ...selectedFiles];
+          const fileList = document.getElementById('fileList');
+          fileList.innerHTML = ''; 
+
+          for (let i = 0; i < imageFiles.length; i++) {
+              const listItem = document.createElement('li');
+              listItem.textContent = imageFiles[i].name;
+              fileList.appendChild(listItem);
+          }
+      });
+
+      // 게시물 작성 핸들러
+      document.getElementById('postForm').addEventListener('submit', function(e) {
+          e.preventDefault();
+          console.log('게시물 작성 버튼 클릭됨');
+
+          // 글 내용과 이미지 필드 가져오기
+          const content = document.getElementById('content').value.trim(); 
+          const location = document.getElementById('location').value; 
+          const tags = document.getElementById('tags').value;
+
+          console.log('이미지 파일 개수:', imageFiles.length);
+          console.log('게시물 내용:', content);
+
+          // 필수 항목 체크
+          if (imageFiles.length === 0) {
+              alert('이미지를 첨부해 주세요.'); // 이미지가 없을 경우 경고
+              return;
+          }
+
+          if (!content) {
+              alert('글 내용을 작성해 주세요.'); // 내용이 없을 경우 경고
+              return;
+          }
+
+          const formData = new FormData(); 
+          formData.append('content', content); 
+          formData.append('location', location); 
+          formData.append('tags', tags); 
+
+          for (let i = 0; i < imageFiles.length; i++) {
+              formData.append('images', imageFiles[i]);
+          }
+
+          console.log('폼 데이터 준비 완료, 서버로 전송 시도');
+
+          fetch(`${API_BASE_URL}insta/posts/create/`, {
+              method: 'POST',
+              body: formData,
+              credentials: 'include',
+              headers: {
+                  'X-CSRFToken': getCSRFToken(),
+              }
+          })
+          .then(response => {
+              if (!response.ok) {
+                  throw new Error('Network response was not ok');
+              }
+              return response.json();
+          })
+          .then(data => {
+              alert('게시물이 성공적으로 작성되었습니다.');
+              window.location.href = 'index-main.html';  
+          })
+          .catch(error => {
+              console.error('Error:', error);
+              alert('게시물 작성 중 오류가 발생했습니다.');
+          });
+      });
+
+      function getCSRFToken() {
+          return document.cookie.split('; ')
+              .find(row => row.startsWith('csrftoken='))
+              ?.split('=')[1] || '';
+      }
+  });
+</script>
+
+
 </body>
 </html>
