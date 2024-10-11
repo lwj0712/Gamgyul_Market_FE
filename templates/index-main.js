@@ -6,6 +6,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const logoutBtn = document.getElementById('logout-btn');
     const postList = document.getElementById('post-list');
     const friendRecommendations = document.getElementById('friend-recommendations');
+    const profileImage = document.getElementById('profile-image');
+    profileImage.src = '/templates/images/default-profile.jpg'; // 기본 이미지 경로 설정
 
     // 사용자 인증
     async function checkAuth() {
@@ -20,21 +22,43 @@ document.addEventListener('DOMContentLoaded', function() {
     
             if (response.ok) {
                 const userData = await response.json();
-                if (userInfo) userInfo.style.display = 'block';
-                if (loginLink) loginLink.style.display = 'none';
-                if (usernameSpan) usernameSpan.textContent = userData.username;
-                if (profileLink) profileLink.href = `/templates/profile.html?username=${userData.username}`;
+                console.log(userData);
+
+                if (userInfo) {
+                    userInfo.style.display = 'block'; // 사용자 정보 표시
+                }
+                if (loginLink) {
+                    loginLink.style.display = 'none'; // 로그인 링크 숨기기
+                }
+                usernameSpan.textContent = userData.username; // 사용자 이름 업데이트
+
+                // profileLink의 href를 사용자 이름이 있을 경우에만 설정
+                if (profileLink) { // profileLink가 null이 아닐 경우에만 href 설정
+                    profileLink.href = `/templates/profile.html?username=${userData.username}`;
+                }
+
+                // profileImage.src = userData.profile_image || '/path/to/default/image.jpg';
+                if (logoutBtn) {
+                    logoutBtn.style.display = 'block'; // 로그아웃 버튼 표시
+                }
             } else {
-                if (userInfo) userInfo.style.display = 'none';
-                if (loginLink) loginLink.style.display = 'block';
+                if (userInfo) {
+                    userInfo.style.display = 'none'; // 사용자 정보 숨기기
+                }
+                if (loginLink) {
+                    loginLink.style.display = 'block'; // 로그인 링크 보이기
+                }
             }
         } catch (error) {
             console.error('인증 확인 중 오류 발생:', error);
-            if (userInfo) userInfo.style.display = 'none';
-            if (loginLink) loginLink.style.display = 'block';
+            if (userInfo) {
+                userInfo.style.display = 'none'; // 사용자 정보 숨기기
+            }
+            if (loginLink) {
+                loginLink.style.display = 'block'; // 로그인 링크 보이기
+            }
         }
-        // 인증 상태와 관계없이 게시물을 로드합니다.
-        loadPosts();
+        loadPosts(); // 인증 상태와 관계없이 게시물 로드
     }
 
     // 게시물 목록 불러오기
@@ -181,8 +205,10 @@ document.addEventListener('DOMContentLoaded', function() {
     async function init() {
         await checkAuth();
         loadPosts();
-        if (userInfo && userInfo.style.display === 'block') {
+        if (userInfo.style.display === 'block') {
             loadFriendRecommendations();
         }
     }
+
+    init();
 });

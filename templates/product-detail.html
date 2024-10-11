@@ -1,20 +1,211 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>상품 상세 - 감귤 매장</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Your custom CSS -->
-    <link href="assets/css/style.css" rel="stylesheet">
+	<title>감귤하우스 - 프로필</title>
+
+	<!-- Meta Tags -->
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<meta name="author" content="Webestica.com">
+	<meta name="description" content="Bootstrap 5 based Social Media Network and Community Theme">
+
+	<!-- Dark mode -->
+	<script>
+		const storedTheme = localStorage.getItem('theme')
+ 
+		const getPreferredTheme = () => {
+			if (storedTheme) {
+				return storedTheme
+			}
+			return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'light'
+		}
+
+		const setTheme = function (theme) {
+			if (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+				document.documentElement.setAttribute('data-bs-theme', 'dark')
+			} else {
+				document.documentElement.setAttribute('data-bs-theme', theme)
+			}
+		}
+
+		setTheme(getPreferredTheme())
+
+		window.addEventListener('DOMContentLoaded', () => {
+		    var el = document.querySelector('.theme-icon-active');
+			if(el != 'undefined' && el != null) {
+				const showActiveTheme = theme => {
+				const activeThemeIcon = document.querySelector('.theme-icon-active use')
+				const btnToActive = document.querySelector(`[data-bs-theme-value="${theme}"]`)
+				const svgOfActiveBtn = btnToActive.querySelector('.mode-switch use').getAttribute('href')
+
+				document.querySelectorAll('[data-bs-theme-value]').forEach(element => {
+					element.classList.remove('active')
+				})
+
+				btnToActive.classList.add('active')
+				activeThemeIcon.setAttribute('href', svgOfActiveBtn)
+			}
+
+			window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+				if (storedTheme !== 'light' || storedTheme !== 'dark') {
+					setTheme(getPreferredTheme())
+				}
+			})
+
+			showActiveTheme(getPreferredTheme())
+
+			document.querySelectorAll('[data-bs-theme-value]')
+				.forEach(toggle => {
+					toggle.addEventListener('click', () => {
+						const theme = toggle.getAttribute('data-bs-theme-value')
+						localStorage.setItem('theme', theme)
+						setTheme(theme)
+						showActiveTheme(theme)
+					})
+				})
+
+			}
+		})
+		
+	</script>
+
+	<!-- Favicon -->
+	<link rel="shortcut icon" href="assets/images/favicon.ico">
+
+	<!-- Google Font -->
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+
+	<!-- Plugins CSS -->
+	<link rel="stylesheet" type="text/css" href="assets/vendor/font-awesome/css/all.min.css">
+	<link rel="stylesheet" type="text/css" href="assets/vendor/bootstrap-icons/bootstrap-icons.css">
+
+	<!-- Theme CSS -->
+	<link rel="stylesheet" type="text/css" href="assets/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </head>
+
 <body>
 
-<!-- Header -->
-<header>
-    <!-- Navbar content here -->
+<!-- Header START -->
+<header class="navbar-light fixed-top header-static bg-mode">
+	<!-- Logo Nav START -->
+	<nav class="navbar navbar-expand-lg">
+		<div class="container">
+			<!-- Logo START -->
+			<a class="navbar-brand" href="index.html">
+        <img class="light-mode-item navbar-brand-item" src="images/gamgyulhouselogo.png" alt="logo">
+				<img class="dark-mode-item navbar-brand-item" src="images/gamgyulhouselogo.png" alt="logo">
+			</a>
+			<!-- Logo END -->
+
+			<!-- Responsive navbar toggler -->
+			<button class="navbar-toggler ms-auto icon-md btn btn-light p-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-animation">
+          <span></span>
+          <span></span>
+          <span></span>
+        </span>
+      </button>
+
+			<!-- Main navbar START -->
+			<div class="collapse navbar-collapse" id="navbarCollapse">
+				<ul class="navbar-nav navbar-nav-scroll ms-auto">
+					<!-- Nav item 1 Posts -->
+					<li class="nav-item dropdown">
+						<a class="nav-link dropdown-toggle" href="#" id="postMenu" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Posts</a>
+						<ul class="dropdown-menu" aria-labelledby="postMenu">
+							<li> <a class="dropdown-item" href="index.html">Post list</a></li>
+							<li> <a class="dropdown-item" href="post-create.html">Post create</a></li>              
+						</ul>
+					</li>
+					<!-- Nav item 3 Market -->
+					<li class="nav-item dropdown">
+						<a class="nav-link dropdown-toggle" href="#" id="marketMenu" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Market </a>
+						<ul class="dropdown-menu" aria-labelledby="marketMenu">
+                            <li> <a class="dropdown-item" href="product-list.html">Product list</a></li>
+							<li> <a class="dropdown-item" href="product-create.html">Product create</a> </li>
+						</ul>
+					</li>
+				</ul>
+			</div>
+			<!-- Main navbar END -->
+			<!-- Nav right START -->
+			<ul class="nav flex-nowrap align-items-center ms-sm-3 list-unstyled">
+				<li class="nav-item ms-2">
+					<a class="nav-link bg-light icon-md btn btn-light p-0" href="/templates/chat.html">
+						<i class="bi bi-chat-left-text-fill fs-6"> </i>
+					</a>
+				</li>
+        <li class="nav-item dropdown ms-2">
+					<a class="nav-link bg-light icon-md btn btn-light p-0" href="#" id="notifDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
+            <span class="badge-notif animation-blink"></span>
+						<i class="bi bi-bell-fill fs-6"> </i>
+					</a>
+        </li>
+        <li class="nav-item ms-2">
+          <a class="nav-link" href="/templates/login.html" id="login-link" style="display: none;">로그인</a>
+        </li>
+        <li class="nav-item ms-2 dropdown">
+          <a class="nav-link btn icon-md p-0" href="#" id="profileDropdown" role="button" data-bs-auto-close="outside" data-bs-display="static" data-bs-toggle="dropdown" aria-expanded="false">
+            <img class="avatar-img rounded-2" src="" alt="프로필 이미지" id="nav-profile-image">
+          </a>
+          <ul class="dropdown-menu dropdown-animation dropdown-menu-end pt-3 small me-md-n3" aria-labelledby="profileDropdown">
+            <!-- Profile info -->
+            <li class="px-3">
+              <div class="d-flex align-items-center position-relative">
+                <!-- Avatar -->
+                <div class="avatar me-3">
+                  <img class="avatar-img rounded-circle" src="" alt="프로필 이미지" id="dropdown-profile-image">
+                </div>
+                <div>
+                  <a class="h6 stretched-link" href="#" id="dropdown-username"></a>
+                  <p class="small m-0" id="dropdown-email"></p>
+                </div>
+              </div>
+              <a class="dropdown-item btn btn-primary-soft btn-sm my-2 text-center" id="view-profile-link" href="#">프로필 보기</a>
+            </li>
+            <!-- Links -->
+            <li><a class="dropdown-item" href="#" id="profile-settings-link"><i class="bi bi-gear fa-fw me-2"></i>설정</a></li>
+            <li class="dropdown-divider"></li>
+            <li><a class="dropdown-item bg-danger-soft-hover" href="#" id="sign-out-link"><i class="bi bi-power fa-fw me-2"></i>로그아웃</a></li>
+            <li> <hr class="dropdown-divider"></li>
+            <!-- Dark mode options START -->
+            <li>
+              <div class="modeswitch-item theme-icon-active d-flex justify-content-center gap-3 align-items-center p-2 pb-0">
+                <span>모드:</span>
+                <button type="button" class="btn btn-modeswitch nav-link text-primary-hover mb-0" data-bs-theme-value="light" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Light">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-sun fa-fw mode-switch" viewBox="0 0 16 16">
+                    <path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm0 1a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8zm10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0zm-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0zm9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707zM4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708z"/>
+                    <use href="#"></use>
+                  </svg>
+                </button>
+                <button type="button" class="btn btn-modeswitch nav-link text-primary-hover mb-0" data-bs-theme-value="dark" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Dark">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-moon-stars fa-fw mode-switch" viewBox="0 0 16 16">
+                    <path d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 0 1 .81.316.733.733 0 0 1-.031.893A8.349 8.349 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 0 1 6 .278zM4.858 1.311A7.269 7.269 0 0 0 1.025 7.71c0 4.02 3.279 7.276 7.319 7.276a7.316 7.316 0 0 0 5.205-2.162c-.337.042-.68.063-1.029.063-4.61 0-8.343-3.714-8.343-8.29 0-1.167.242-2.278.681-3.286z"/>
+                    <path d="M10.794 3.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387a1.734 1.734 0 0 0-1.097 1.097l-.387 1.162a.217.217 0 0 1-.412 0l-.387-1.162A1.734 1.734 0 0 0 9.31 6.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387a1.734 1.734 0 0 0 1.097-1.097l.387-1.162zM13.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.156 1.156 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.156 1.156 0 0 0-.732-.732l-.774-.258a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732L13.863.1z"/>
+                    <use href="#"></use>
+                  </svg>
+                </button>
+                <button type="button" class="btn btn-modeswitch nav-link text-primary-hover mb-0 active" data-bs-theme-value="auto" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Auto">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-circle-half fa-fw mode-switch" viewBox="0 0 16 16">
+                    <path d="M8 15A7 7 0 1 0 8 1v14zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16z"/>
+                    <use href="#"></use>
+                  </svg>
+                </button>
+              </div>
+            </li> 
+            <!-- Dark mode options END-->
+          </ul>
+        </li>
+      </ul>
+      <!-- Nav right END -->
+			<!-- Nav right END -->
+		</div>
+	</nav>
+	<!-- Logo Nav END -->
 </header>
+<!-- Header END -->
 
 <!-- Main content -->
 <main role="main">
@@ -89,16 +280,11 @@
     </div>
 </main>
 
-<!-- Footer -->
-<footer>
-    <!-- Footer content here -->
-</footer>
-
-<!-- Bootstrap Bundle with Popper -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 <!-- Your custom JavaScript -->
 <script>
-const API_BASE_URL = "http://127.0.0.1:8000/";
+const username = getCurrentUsername();
+const urlParams = new URLSearchParams(window.location.search);
+const productId = urlParams.get('id');
 
 document.addEventListener('DOMContentLoaded', function() {
     // Fetch and display product details
@@ -122,7 +308,7 @@ async function fetchProductDetails() {
         if (!productId) {
             throw new Error('Product ID not found in URL');
         }
-        const response = await fetch(`${API_BASE_URL}market/products/${productId}`);
+        const response = await fetch(`${API_BASE_URL}/market/products/${productId}`);
         const product = await response.json();
         displayProductDetails(product);
         displayReviews(product.reviews);
@@ -132,37 +318,73 @@ async function fetchProductDetails() {
 }
 
 function displayProductDetails(product) {
+    const formattedPrice = parseInt(product.price).toLocaleString('ko-KR');
+
     document.getElementById('product-name').textContent = product.name;
     document.getElementById('product-username').textContent = product.username;
-    document.getElementById('product-user-image').src = product.user_image;
+    document.getElementById('product-user-image').src = product.user.profile_image;
     document.getElementById('product-user-title').textContent = product.user_title;
-    document.getElementById('product-timestamp').textContent = product.timestamp;
-    document.getElementById('product-price').textContent = product.price;
-    document.getElementById('product-rating').textContent = product.average_rating.toFixed(1);
+    document.getElementById('product-timestamp').textContent = product.created_at;
+    document.getElementById('product-price').textContent = `${formattedPrice}`;
+    document.getElementById('product-rating').textContent = product.average_rating != null ? product.average_rating.toFixed(1) : '평가 없음';
     document.getElementById('product-description').textContent = product.description;
     document.getElementById('product-stock').textContent = product.stock;
     document.getElementById('product-variety').textContent = product.variety;
     document.getElementById('product-region').textContent = product.growing_region;
     document.getElementById('product-harvest-date').textContent = product.harvest_date;
 
+    const userImage = document.getElementById('product-user-image');
+    if (product.user_profile_image) {
+        userImage.src = product.user_profile_image;
+    } else {
+        userImage.src = DEFAULT_PROFILE_IMAGE;
+    }
+    userImage.onerror = function() {
+        this.src = DEFAULT_PROFILE_IMAGE;
+    };
+
     const productImages = document.getElementById('product-images');
-    product.images.forEach(image => {
+    productImages.innerHTML = ''; // 기존 이미지 초기화
+
+    if (product.images && product.images.length > 0) {
+        product.images.forEach(image => {
+            const img = document.createElement('img');
+            img.src = image;
+            img.alt = product.name;
+            img.className = 'img-fluid mb-2';
+            img.onerror = function() {
+                this.src = DEFAULT_PROFILE_IMAGE;
+            };
+            productImages.appendChild(img);
+        });
+    } else {
+        // 이미지가 없는 경우 기본 이미지 표시
         const img = document.createElement('img');
-        img.src = image;
-        img.alt = product.name;
+        img.src = DEFAULT_PROFILE_IMAGE;
+        img.alt = '기본 제품 이미지';
         img.className = 'img-fluid mb-2';
         productImages.appendChild(img);
-    });
+    }
+
+    const currentUsername = getCurrentUsername();
+    const editDeleteButtons = document.querySelector('.mt-3');
+    if (currentUsername === product.username) {
+        editDeleteButtons.style.display = 'block';
+    } else {
+        editDeleteButtons.style.display = 'none';
+    }
 }
 
 function displayReviews(reviews) {
     const reviewList = document.getElementById('review-list');
+    reviewList.innerHTML = ''; // 기존 리뷰 목록을 초기화합니다.
+
     reviews.forEach(review => {
         const reviewElement = document.createElement('div');
         reviewElement.className = 'd-flex mb-4';
         reviewElement.innerHTML = `
             <div class="avatar avatar-xs">
-                <img src="${review.user_image}" alt="${review.user}" class="avatar-img rounded-circle">
+                <img src="${review.user_profile_image || DEFAULT_PROFILE_IMAGE}" alt="${review.user}" class="avatar-img rounded-circle" onerror="this.src='${DEFAULT_PROFILE_IMAGE}'">
             </div>
             <div class="ms-2">
                 <div class="bg-light p-3 rounded">
@@ -175,9 +397,65 @@ function displayReviews(reviews) {
                 </div>
             </div>
         `;
+
+        // 현재 사용자가 리뷰 작성자인 경우 삭제 버튼 추가
+        if (review.user === username) {
+            const deleteButton = document.createElement('button');
+            deleteButton.className = 'btn btn-danger btn-sm ms-2 align-self-start delete-review';
+            deleteButton.textContent = '삭제';
+            deleteButton.dataset.reviewId = review.id;
+            reviewElement.appendChild(deleteButton);
+        }
+
         reviewList.appendChild(reviewElement);
     });
+
+    // 삭제 버튼에 대한 이벤트 리스너 추가
+    reviewList.addEventListener('click', function(e) {
+        if (e.target.classList.contains('delete-review')) {
+            const reviewId = e.target.dataset.reviewId;
+            if (confirm('정말로 이 리뷰를 삭제하시겠습니까?')) {
+                deleteReview(reviewId);
+            }
+        }
+    });
 }
+
+// 리뷰 삭제 함수 (서버와의 통신을 위해 별도로 구현해야 함)
+function deleteReview(reviewId) {
+    // 여기에 서버와 통신하여 리뷰를 삭제하는 코드를 구현해야 합니다.
+    // 예를 들어:
+    fetch(`${API_BASE_URL}/market/products/${productId}/reviews/${reviewId}/delete/`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': getCSRFToken(),
+        },
+        credentials: 'include',
+    })
+    .then(response => {
+        if (response.status === 204) {
+            // 204 No Content는 성공적인 삭제를 의미합니다
+            return { status: 'success', message: '리뷰가 성공적으로 삭제되었습니다.' };
+        } else if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        // 204가 아닌 다른 성공 상태 코드의 경우 (예: 200)
+        return response.json();
+    })
+    .then(data => {
+        console.log('Response:', data.message);
+        // UI에서 해당 리뷰 제거
+        const reviewElement = document.querySelector(`[data-review-id="${reviewId}"]`);
+        if (reviewElement) {
+            reviewElement.remove();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('리뷰 삭제 중 오류가 발생했습니다: ' + error.message);
+    });
+}
+
 
 async function handleReviewSubmit(event) {
     event.preventDefault();
@@ -199,7 +477,7 @@ async function handleReviewSubmit(event) {
     
     try {
         // 백엔드로 리뷰 데이터를 전송합니다
-        const response = await fetch(`${API_BASE_URL}market/products/${productId}/`, {
+        const response = await fetch(`${API_BASE_URL}/market/products/${productId}/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -223,9 +501,9 @@ async function handleReviewSubmit(event) {
             addReviewToList({
                 rating: result.data.rating,
                 content: result.data.content,
-                user: result.data.user.username,
-                timestamp: result.data.created_at,
-                user_image: result.data.user.profile_image || '/path/to/default/avatar.jpg'
+                user: result.data.user,
+                created_at: result.data.created_at,
+                user_image: result.data.user_image || DEFAULT_PROFILE_IMAGE
             });
             
             // 성공 메시지를 표시합니다
@@ -250,7 +528,11 @@ function addReviewToList(review) {
     reviewElement.className = 'd-flex mb-4';
     reviewElement.innerHTML = `
         <div class="avatar avatar-xs">
-            <img src="${review.user_image}" alt="${review.user}" class="avatar-img rounded-circle">
+            <img src="${getFullImageUrl(review.user_image)}" 
+                onerror="this.onerror=null; this.src='${DEFAULT_PROFILE_IMAGE}'; console.error('Image load failed:', this.src);"
+                onload="console.log('Image loaded successfully:', this.src)"
+                class="avatar-img rounded-circle me-2" 
+                style="width: 40px; height: 40px;">
         </div>
         <div class="ms-2">
             <div class="bg-light p-3 rounded">
@@ -287,7 +569,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const urlParams = new URLSearchParams(window.location.search);
         const productId = urlParams.get('id');
       
-      fetch(`${API_BASE_URL}market/products/${productId}/delete/`, {
+      fetch(`${API_BASE_URL}/market/products/${productId}/delete/`, {
         method: 'DELETE',
         credentials: 'include',
         headers: {
@@ -316,6 +598,12 @@ function getCSRFToken() {
         .find(row => row.startsWith('csrftoken='))
         ?.split('=')[1] || '';
 }
+
+function getCurrentUsername() {
+        return localStorage.getItem('username') || '';
+    }
+
 </script>
+<script src="/templates/header.js" defer></script>
 </body>
 </html>
