@@ -384,6 +384,11 @@ function addPageButton(parent, pageNumber, text = pageNumber) {
         e.preventDefault();
         currentPage = pageNumber;
         loadProducts(currentPage, searchQuery);
+
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
     });
 
     li.appendChild(a);
