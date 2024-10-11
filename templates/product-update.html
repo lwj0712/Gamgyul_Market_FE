@@ -264,8 +264,9 @@
                         </div>
                     
                         <div class="mb-3">
-                            <label for="image">이미지 업로드 (최대 5장)</label>
-                            <input type="file" name="image" id="image" multiple accept="image/*" class="form-control">
+                            <label for="images" class="form-label">이미지 업로드 (최대 5장)</label>
+                            <input type="file" name="images[]" id="images" multiple accept="image/*" class="form-control">
+                            <div id="imagePreview"></div>
                         </div>
                     
                         <button type="submit" class="btn btn-primary">상품 수정</button>
@@ -280,6 +281,9 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('productForm');
+    const imageInput = document.getElementById('images');
+    const imagePreview = document.getElementById('imagePreview');
+
     if (!form) {
         console.error('Form with id "productForm" not found');
         return;
@@ -292,40 +296,67 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
-    // Helper function to safely get element value
-    const getValue = (id) => {
-        const element = document.getElementById(id);
-        return element ? element.value : '';
-    };
-
-    // Helper function to safely set element value
+    // Helper functions
+    const getValue = (id) => document.getElementById(id)?.value || '';
     const setValue = (id, value) => {
         const element = document.getElementById(id);
-        if (element) {
-            element.value = value;
-        }
+        if (element) element.value = value;
     };
 
     // 상품 정보 불러오기
     fetch(`${API_BASE_URL}/market/products/${productId}`, {
         method: 'GET',
-        headers: {
-            'Accept': 'application/json'
-        }
+        headers: { 'Accept': 'application/json' }
     })
     .then(response => response.json())
     .then(data => {
-        setValue('name', data.product_name);
-        setValue('price', data.price);
-        setValue('description', data.description);
-        setValue('stock', data.stock);
-        setValue('variety', data.variety);
-        setValue('growing_region', data.region);
-        setValue('harvest_date', data.harvest_date);
+        ['name', 'price', 'description', 'stock', 'variety', 'growing_region', 'harvest_date']
+            .forEach(field => setValue(field, data[field]));
+
+        // 기존 이미지 표시
+        const imageContainer = document.createElement('div');
+        imageContainer.id = 'existingImages';
+        data.images.forEach((imageUrl, index) => {
+            const imageWrapper = document.createElement('div');
+            imageWrapper.className = 'image-wrapper';
+            imageWrapper.innerHTML = `
+                <img src="${imageUrl}" style="width:100px; height:100px;">
+                <input type="checkbox" name="images_to_delete" value="${imageUrl}" id="delete-image-${index}">
+                <label for="delete-image-${index}">삭제</label>
+            `;
+            imageContainer.appendChild(imageWrapper);
+        });
+        form.insertBefore(imageContainer, form.querySelector('button[type="submit"]'));
     })
     .catch(error => {
         console.error('Error:', error);
         alert('상품 정보를 불러오는 데 실패했습니다.');
+    });
+
+    // 이미지 미리보기 기능
+    imageInput.addEventListener('change', function(event) {
+        imagePreview.innerHTML = ''; // 기존 미리보기 초기화
+        const files = event.target.files;
+
+        if (files.length > 5) {
+            alert('최대 5개의 이미지만 업로드 할 수 있습니다.');
+            event.target.value = ''; // 파일 선택 초기화
+            return;
+        }
+
+        Array.from(files).forEach(file => {
+            if (!file.type.startsWith('image/')) return;
+
+            const img = document.createElement('img');
+            img.file = file;
+            img.style.width = '100px';
+            img.style.height = '100px';
+            imagePreview.appendChild(img);
+
+            const reader = new FileReader();
+            reader.onload = (e) => img.src = e.target.result;
+            reader.readAsDataURL(file);
+        });
     });
 
     // 폼 제출 처리
@@ -334,28 +365,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const formData = new FormData();
 
-        formData.append('name', getValue('name'));
-        formData.append('price', getValue('price'));
-        formData.append('description', getValue('description'));
-        formData.append('stock', getValue('stock'));
-        formData.append('variety', getValue('variety'));
-        formData.append('growing_region', getValue('growing_region'));
-        formData.append('harvest_date', getValue('harvest_date'));
+        ['name', 'price', 'description', 'stock', 'variety', 'growing_region', 'harvest_date']
+            .forEach(field => formData.append(field, getValue(field)));
 
-        const imageInput = document.getElementById('image');
-        if (imageInput && imageInput.files) {
-            for (let i = 0; i < Math.min(imageInput.files.length, 5); i++) {
-                formData.append('image', imageInput.files[i]);
-            }
+        // 삭제할 이미지 처리
+        document.querySelectorAll('input[name="images_to_delete"]:checked')
+            .forEach(checkbox => formData.append('images_to_delete', checkbox.value));
+
+        // 새 이미지 처리
+        if (imageInput.files) {
+            Array.from(imageInput.files).slice(0, 5).forEach(file => formData.append('image', file));
         }
 
         fetch(`${API_BASE_URL}/market/products/${productId}/update/`, {
             method: 'PATCH',
             body: formData,
             credentials: 'include',
-            headers: {
-                'X-CSRFToken': getCSRFToken(),
-            }
+            headers: { 'X-CSRFToken': getCSRFToken() }
         })
         .then(response => {
             if (!response.ok) {

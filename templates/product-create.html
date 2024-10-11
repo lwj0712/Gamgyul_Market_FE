@@ -263,8 +263,9 @@
                         </div>
                     
                         <div class="mb-3">
-                            <label for="image">이미지 업로드 (최대 5장)</label>
-                            <input type="file" name="image" id="image" multiple accept="image/*" class="form-control">
+                            <label for="images" class="form-label">이미지 업로드 (최대 5장)</label>
+                            <input type="file" name="images[]" id="images" multiple accept="image/*" class="form-control">
+                            <div id="imagePreview"></div>
                         </div>
                     
                         <button type="submit" class="btn btn-primary">상품 생성</button>
@@ -279,11 +280,43 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.getElementById('productForm');
+        const imageInput = document.getElementById('images');
+        const imagePreview = document.getElementById('imagePreview');
+
         if (!form) {
             console.error('Form with id "productForm" not found');
             return;
         }
-    
+
+        // 이미지 미리보기 기능
+        imageInput.addEventListener('change', function(event) {
+            imagePreview.innerHTML = ''; // 기존 미리보기 초기화
+            const files = event.target.files;
+
+            if (files.length > 5) {
+                alert('최대 5개의 이미지만 업로드 할 수 있습니다.');
+                event.target.value = ''; // 파일 선택 초기화
+                return;
+            }
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                if (!file.type.startsWith('image/')){ continue } // 이미지 파일만 처리
+
+                const img = document.createElement('img');
+                img.file = file;
+                imagePreview.appendChild(img);
+
+                const reader = new FileReader();
+                reader.onload = (function(aImg) { 
+                    return function(e) { 
+                        aImg.src = e.target.result; 
+                    }; 
+                })(img);
+                reader.readAsDataURL(file);
+            }
+        });
+
         form.addEventListener('submit', function(e) {
             e.preventDefault();
         
@@ -300,13 +333,12 @@
             formData.append('description', getValue('description'));
             formData.append('stock', getValue('stock'));
             formData.append('variety', getValue('variety'));
-            formData.append('growing_region', getValue('region')); // Changed from 'region' to 'growing_region'
-            formData.append('harvest_date', getValue('harvestDate')); // Changed from 'harvestDate' to 'harvest_date'
+            formData.append('growing_region', getValue('growing_region'));
+            formData.append('harvest_date', getValue('harvest_date'));
         
-            const imageInput = document.getElementById('image');
             if (imageInput && imageInput.files) {
                 for (let i = 0; i < Math.min(imageInput.files.length, 5); i++) {
-                    formData.append('image', imageInput.files[i]); // Changed from 'images' to 'image'
+                    formData.append('images', imageInput.files[i]);
                 }
             }
         
