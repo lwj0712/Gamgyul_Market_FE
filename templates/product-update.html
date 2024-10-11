@@ -227,39 +227,47 @@
             <div class="row g-4">
                 <div class="col-12">
                     <h2 class="mb-4">상품 수정</h2>
-                    <form id="productForm">
+                    <form method="post" enctype="multipart/form-data" id="productForm">
                         <div class="mb-3">
-                            <label for="productName" class="form-label">상품명</label>
-                            <input type="text" class="form-control" id="productName" required>
+                            <label for="name">상품명</label>
+                            <input type="text" name="name" id="name" class="form-control" required>
                         </div>
+                    
                         <div class="mb-3">
-                            <label for="price" class="form-label">가격</label>
-                            <input type="number" class="form-control" id="price" required>
+                            <label for="price">가격</label>
+                            <input type="number" name="price" id="price" class="form-control" step="0.01" required>
                         </div>
+                    
                         <div class="mb-3">
-                            <label for="description" class="form-label">상품 설명</label>
-                            <textarea class="form-control" id="description" rows="3" required></textarea>
+                            <label for="description">상품 설명</label>
+                            <textarea name="description" id="description" class="form-control" required></textarea>
                         </div>
+                    
                         <div class="mb-3">
-                            <label for="stock" class="form-label">재고</label>
-                            <input type="number" class="form-control" id="stock" required>
+                            <label for="stock">재고</label>
+                            <input type="number" name="stock" id="stock" class="form-control" required>
                         </div>
+                    
                         <div class="mb-3">
-                            <label for="variety" class="form-label">품종</label>
-                            <input type="text" class="form-control" id="variety">
+                            <label for="variety">품종</label>
+                            <input type="text" name="variety" id="variety" class="form-control">
                         </div>
+                    
                         <div class="mb-3">
-                            <label for="region" class="form-label">재배 지역</label>
-                            <input type="text" class="form-control" id="region">
+                            <label for="growing_region">재배 지역</label>
+                            <input type="text" name="growing_region" id="growing_region" class="form-control">
                         </div>
+                    
                         <div class="mb-3">
-                            <label for="harvestDate" class="form-label">재배 일자</label>
-                            <input type="date" class="form-control" id="harvestDate">
+                            <label for="harvest_date">재배 일자</label>
+                            <input type="date" name="harvest_date" id="harvest_date" class="form-control">
                         </div>
+                    
                         <div class="mb-3">
-                            <label for="images" class="form-label">이미지 업로드 (최대 5장)</label>
-                            <input type="file" class="form-control" id="images" multiple accept="image/*" max="5">
+                            <label for="image">이미지 업로드 (최대 5장)</label>
+                            <input type="file" name="image" id="image" multiple accept="image/*" class="form-control">
                         </div>
+                    
                         <button type="submit" class="btn btn-primary">상품 수정</button>
                         <a href="product-list.html" class="btn btn-secondary">취소</a>
                     </form>
@@ -270,14 +278,33 @@
 </main>
 
 <script>
-
 document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('productForm');
+    if (!form) {
+        console.error('Form with id "productForm" not found');
+        return;
+    }
+
     const productId = new URLSearchParams(window.location.search).get('id');
     if (!productId) {
         alert('상품 ID가 없습니다.');
         window.location.href = 'product-list.html';
         return;
     }
+
+    // Helper function to safely get element value
+    const getValue = (id) => {
+        const element = document.getElementById(id);
+        return element ? element.value : '';
+    };
+
+    // Helper function to safely set element value
+    const setValue = (id, value) => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.value = value;
+        }
+    };
 
     // 상품 정보 불러오기
     fetch(`${API_BASE_URL}/market/products/${productId}`, {
@@ -288,13 +315,13 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .then(response => response.json())
     .then(data => {
-        document.getElementById('productName').value = data.product_name;
-        document.getElementById('price').value = data.price;
-        document.getElementById('description').value = data.description;
-        document.getElementById('stock').value = data.stock;
-        document.getElementById('variety').value = data.variety;
-        document.getElementById('region').value = data.region;
-        document.getElementById('harvestDate').value = data.harvest_date;
+        setValue('name', data.product_name);
+        setValue('price', data.price);
+        setValue('description', data.description);
+        setValue('stock', data.stock);
+        setValue('variety', data.variety);
+        setValue('growing_region', data.region);
+        setValue('harvest_date', data.harvest_date);
     })
     .catch(error => {
         console.error('Error:', error);
@@ -302,34 +329,39 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // 폼 제출 처리
-    document.getElementById('productForm').addEventListener('submit', function(e) {
+    form.addEventListener('submit', function(e) {
         e.preventDefault();
 
         const formData = new FormData();
-        formData.append('name', document.getElementById('productName').value);
-        formData.append('price', document.getElementById('price').value);
-        formData.append('description', document.getElementById('description').value);
-        formData.append('stock', document.getElementById('stock').value);
-        formData.append('variety', document.getElementById('variety').value);
-        formData.append('region', document.getElementById('region').value);
-        formData.append('harvest_date', document.getElementById('harvestDate').value);
 
-        const imageFiles = document.getElementById('images').files;
-        for (let i = 0; i < Math.min(imageFiles.length, 5); i++) {
-            formData.append('image', imageFiles[i]);
+        formData.append('name', getValue('name'));
+        formData.append('price', getValue('price'));
+        formData.append('description', getValue('description'));
+        formData.append('stock', getValue('stock'));
+        formData.append('variety', getValue('variety'));
+        formData.append('growing_region', getValue('growing_region'));
+        formData.append('harvest_date', getValue('harvest_date'));
+
+        const imageInput = document.getElementById('image');
+        if (imageInput && imageInput.files) {
+            for (let i = 0; i < Math.min(imageInput.files.length, 5); i++) {
+                formData.append('image', imageInput.files[i]);
+            }
         }
 
         fetch(`${API_BASE_URL}/market/products/${productId}/update/`, {
             method: 'PATCH',
             body: formData,
-            credentials: 'include',  // 쿠키를 포함시킵니다
+            credentials: 'include',
             headers: {
-                'X-CSRFToken': getCSRFToken(),  // CSRF 토큰 추가
+                'X-CSRFToken': getCSRFToken(),
             }
         })
         .then(response => {
             if (!response.ok) {
-                throw new Error('Network response was not ok');
+                return response.json().then(data => {
+                    throw new Error(JSON.stringify(data));
+                });
             }
             return response.json();
         })
@@ -339,7 +371,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('상품 수정 중 오류가 발생했습니다.');
+            alert(`상품 수정 중 오류가 발생했습니다: ${error.message}`);
         });
     });
 });
