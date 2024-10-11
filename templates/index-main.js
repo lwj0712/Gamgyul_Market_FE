@@ -7,7 +7,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const postList = document.getElementById('post-list');
     const friendRecommendations = document.getElementById('friend-recommendations');
     const profileImage = document.getElementById('profile-image');
-    profileImage.src = '/templates/images/default-profile.jpg'; // 기본 이미지 경로 설정
+    const profilePicUrl = '';
+
+    // profileImage가 있는 경우에만 관련 작업 수행
+    if (profileImage) {
+        profileImage.src = profilePicUrl;
+    }
 
     // 사용자 인증
     async function checkAuth() {
@@ -30,18 +35,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (loginLink) {
                     loginLink.style.display = 'none'; // 로그인 링크 숨기기
                 }
-                usernameSpan.textContent = userData.username; // 사용자 이름 업데이트
+                if (usernameSpan) {
+                    usernameSpan.textContent = userData.username; // 사용자 이름 업데이트
+                }
 
                 // profileLink의 href를 사용자 이름이 있을 경우에만 설정
                 if (profileLink) { // profileLink가 null이 아닐 경우에만 href 설정
-                    profileLink.href = `/templates/profile.html?username=${userData.username}`;
+                    profileLink.href = `/templates/profile.html?username=${encodeURIComponent(userData.username)}`;
                 }
 
-                // profileImage.src = userData.profile_image || '/path/to/default/image.jpg';
                 if (logoutBtn) {
                     logoutBtn.style.display = 'block'; // 로그아웃 버튼 표시
                 }
             } else {
+                // 인증 실패 시 처리
                 if (userInfo) {
                     userInfo.style.display = 'none'; // 사용자 정보 숨기기
                 }
@@ -203,12 +210,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 초기 실행
     async function init() {
-        await checkAuth();
-        loadPosts();
+        const userInfo = document.getElementById('user-info');
+        const loginLink = document.getElementById('login-link');
+        const usernameSpan = document.getElementById('username');
+        const profileLink = document.getElementById('profile-link');
+        const logoutBtn = document.getElementById('logout-btn');
+    
+        // 요소가 존재하는지 확인
+        if (!userInfo || !loginLink || !usernameSpan || !profileLink || !logoutBtn) {
+            console.error('필수 요소가 존재하지 않습니다.');
+            return; // 필요한 요소가 없으면 초기화 중단
+        }
+    
+        await checkAuth(); // 인증 확인
+        loadPosts(); // 게시물 로드
+    
+        // 사용자 정보가 표시될 경우 추천 친구 로드
         if (userInfo.style.display === 'block') {
             loadFriendRecommendations();
         }
     }
-
-    init();
+    
+    // 페이지 로드 시 init 함수 호출
+    document.addEventListener('DOMContentLoaded', init);
 });
