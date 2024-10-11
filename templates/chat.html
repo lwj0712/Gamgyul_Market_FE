@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
 	<title>Social - Network, Community and Event Theme</title>
 
@@ -92,38 +92,38 @@
 Header START -->
 <header class="navbar-light fixed-top header-static bg-mode">
 
-	<!-- Logo Nav START -->
-	<nav class="navbar navbar-expand-lg">
-		<div class="container">
-			<!-- Logo START -->
-			<a class="navbar-brand" href="index.html">
-        <img class="light-mode-item navbar-brand-item" src="images/gamgyulhouselogo.png" alt="logo">
-				<img class="dark-mode-item navbar-brand-item" src="images/gamgyulhouselogo.png" alt="logo">
-			</a>
-			<!-- Logo END -->
-
-			<!-- Responsive navbar toggler -->
-			<button class="navbar-toggler ms-auto icon-md btn btn-light p-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-animation">
-          <span></span>
-          <span></span>
-          <span></span>
-        </span>
-      </button>
-
-			<!-- Main navbar START -->
-			<div class="collapse navbar-collapse" id="navbarCollapse">
-
-        <!-- Nav Search START -->
-        <div class="nav mt-3 mt-lg-0 flex-nowrap align-items-center px-4 px-lg-0">
-          <div class="nav-item w-100">
-            <form class="rounded position-relative">
-              <input class="form-control ps-5 bg-light" type="search" placeholder="Search..." aria-label="Search">
-              <button class="btn bg-transparent px-2 py-0 position-absolute top-50 start-0 translate-middle-y" type="submit"><i class="bi bi-search fs-5"> </i></button>
-            </form>
+    <!-- Logo Nav START -->
+    <nav class="navbar navbar-expand-lg">
+      <div class="container">
+        <!-- Logo START -->
+        <a class="navbar-brand" href="index.html">
+          <img class="light-mode-item navbar-brand-item" src="images/gamgyulhouselogo.png" alt="logo">
+          <img class="dark-mode-item navbar-brand-item" src="images/gamgyulhouselogo.png" alt="logo">
+        </a>
+        <!-- Logo END -->
+  
+        <!-- Responsive navbar toggler -->
+        <button class="navbar-toggler ms-auto icon-md btn btn-light p-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-animation">
+            <span></span>
+            <span></span>
+            <span></span>
+          </span>
+        </button>
+  
+        <!-- Main navbar START -->
+        <div class="collapse navbar-collapse" id="navbarCollapse">
+  
+          <!-- GamgyulHouse START -->
+          <div class="nav mt-3 mt-lg-0 flex-nowrap align-items-center px-4 px-lg-0">
+            <div class="nav-item w-100 text-center">
+                <a href="index.html" class="navbar-brand-item" style="text-decoration: none;">
+                    <h5>GamgyulHouse</h5>
+                </a>
+            </div>
           </div>
-        </div>
-        <!-- Nav Search END -->
+          <!-- GamgyulHouse END -->
+  
 
 				<ul class="navbar-nav navbar-nav-scroll ms-auto">
 					<!-- Nav item 1 Posts -->
@@ -495,19 +495,14 @@ Header END -->
                     </div>
                   </div>
                   <div class="d-flex align-items-center">
-                    <!-- Call button -->
-                    <a href="#!" class="icon-md rounded-circle btn btn-primary-soft me-2 px-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Audio call"><i class="bi bi-telephone-fill"></i></a>
-                    <a href="#!" class="icon-md rounded-circle btn btn-primary-soft me-2 px-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Video call"><i class="bi bi-camera-video-fill"></i></a>
                     <!-- Card action START -->
                     <div class="dropdown">
                       <a class="icon-md rounded-circle btn btn-primary-soft me-2 px-2" href="#" id="chatcoversationDropdown" role="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></a>               
                       <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="chatcoversationDropdown">
                         <li><a class="dropdown-item" href="#"><i class="bi bi-check-lg me-2 fw-icon"></i>Mark as read</a></li>
-                        <li><a class="dropdown-item" href="#"><i class="bi bi-mic-mute me-2 fw-icon"></i>Mute conversation</a></li>
                         <li><a class="dropdown-item" href="#"><i class="bi bi-person-check me-2 fw-icon"></i>View profile</a></li>
                         <li><a class="dropdown-item" href="#"><i class="bi bi-trash me-2 fw-icon"></i>Delete chat</a></li>
                         <li class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="#"><i class="bi bi-archive me-2 fw-icon"></i>Archive chat</a></li>
                       </ul>
                     </div>
                     <!-- Card action END -->
@@ -1323,7 +1318,6 @@ Header END -->
           <div class="card-footer">
             <div class="d-sm-flex align-items-end">
               <textarea class="form-control mb-sm-0 mb-3" data-autoresize placeholder="Type a message" rows="1"></textarea>
-              <button class="btn btn-sm btn-danger-soft ms-sm-2"><i class="fa-solid fa-face-smile fs-6"></i></button>
               <button class="btn btn-sm btn-secondary-soft ms-2"><i class="fa-solid fa-paperclip fs-6"></i></button>
               <button class="btn btn-sm btn-primary ms-2"><i class="fa-solid fa-paper-plane fs-6"></i></button>
             </div>
@@ -1367,7 +1361,6 @@ Header END -->
       <!-- Button  -->
       <div class="d-sm-flex align-items-end">
         <textarea class="form-control mb-sm-0 mb-3" placeholder="Type a message" rows="1" spellcheck="false"></textarea>
-        <button class="btn btn-sm btn-danger-soft ms-sm-2"><i class="fa-solid fa-face-smile fs-6"></i></button>
         <button class="btn btn-sm btn-secondary-soft ms-2"><i class="fa-solid fa-paperclip fs-6"></i></button>
         <button class="btn btn-sm btn-primary ms-2"><i class="fa-solid fa-paper-plane fs-6"></i></button>
       </div>
@@ -1389,6 +1382,8 @@ JS libraries, plugins and custom scripts -->
 
 <!-- Theme Functions -->
 <script src="assets/js/functions.js"></script>
+
+<script src="chat.js"></script>
 
 </body>
 </html>
