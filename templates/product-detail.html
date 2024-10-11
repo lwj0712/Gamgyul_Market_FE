@@ -283,7 +283,6 @@
 <!-- Your custom JavaScript -->
 <script>
 const username = getCurrentUsername();
-console.log(username);
 const urlParams = new URLSearchParams(window.location.search);
 const productId = urlParams.get('id');
 
@@ -319,27 +318,49 @@ async function fetchProductDetails() {
 }
 
 function displayProductDetails(product) {
+    const formattedPrice = parseInt(product.price).toLocaleString('ko-KR');
+
     document.getElementById('product-name').textContent = product.name;
     document.getElementById('product-username').textContent = product.username;
     document.getElementById('product-user-image').src = product.user_image;
     document.getElementById('product-user-title').textContent = product.user_title;
     document.getElementById('product-timestamp').textContent = product.timestamp;
-    document.getElementById('product-price').textContent = product.price;
-    document.getElementById('product-rating').textContent = product.average_rating.toFixed(1);
+    document.getElementById('product-price').textContent = `${formattedPrice}`;
+    document.getElementById('product-rating').textContent = product.average_rating != null ? product.average_rating.toFixed(1) : '평가 없음';
     document.getElementById('product-description').textContent = product.description;
     document.getElementById('product-stock').textContent = product.stock;
     document.getElementById('product-variety').textContent = product.variety;
     document.getElementById('product-region').textContent = product.growing_region;
     document.getElementById('product-harvest-date').textContent = product.harvest_date;
 
+    const userImage = document.getElementById('product-user-image');
+    userImage.src = product.user_image || DEFAULT_PROFILE_IMAGE;
+    userImage.onerror = function() {
+        this.src = DEFAULT_PROFILE_IMAGE;
+    };
+
     const productImages = document.getElementById('product-images');
-    product.images.forEach(image => {
+    productImages.innerHTML = ''; // 기존 이미지 초기화
+
+    if (product.images && product.images.length > 0) {
+        product.images.forEach(image => {
+            const img = document.createElement('img');
+            img.src = image;
+            img.alt = product.name;
+            img.className = 'img-fluid mb-2';
+            img.onerror = function() {
+                this.src = DEFAULT_PROFILE_IMAGE;
+            };
+            productImages.appendChild(img);
+        });
+    } else {
+        // 이미지가 없는 경우 기본 이미지 표시
         const img = document.createElement('img');
-        img.src = image;
-        img.alt = product.name;
+        img.src = DEFAULT_PROFILE_IMAGE;
+        img.alt = '기본 제품 이미지';
         img.className = 'img-fluid mb-2';
         productImages.appendChild(img);
-    });
+    }
 }
 
 function displayReviews(reviews) {
@@ -349,7 +370,7 @@ function displayReviews(reviews) {
         reviewElement.className = 'd-flex mb-4';
         reviewElement.innerHTML = `
             <div class="avatar avatar-xs">
-                <img src="${review.user_image}" alt="${review.user}" class="avatar-img rounded-circle">
+                <img src="${review.user_image || DEFAULT_PROFILE_IMAGE}" alt="${review.user}" class="avatar-img rounded-circle" onerror="this.src='${DEFAULT_PROFILE_IMAGE}'">
             </div>
             <div class="ms-2">
                 <div class="bg-light p-3 rounded">
