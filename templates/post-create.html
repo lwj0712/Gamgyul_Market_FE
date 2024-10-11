@@ -213,7 +213,7 @@ Header END -->
   <!-- Share feed START -->
   <div class="card card-body my-3" style="margin-left: 100px; margin-right: 100px;">
       <div class="d-flex mb-3">
-          <form id="postForm" class="row g-4 w-100">
+          <form class="row g-4 w-100">
               <textarea id="content" class="form-control pe-4 border-0" rows="10" data-autoresize placeholder="하고 싶은 말을 자유롭게 작성해 주세요:)" required aria-label="글 내용"></textarea>
           </form>
       </div>
@@ -257,7 +257,6 @@ Header END -->
 
 
 <script src="assets/vendor/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-<script src="index-main.js"></script>
 <script src='header.js'></script>
 <script src='post-create.js'></script>
 <script>
@@ -266,6 +265,8 @@ Header END -->
   // DOM이 완전히 로드된 후 실행
   document.addEventListener('DOMContentLoaded', function() {
       console.log('DOM 로드 완료, 이벤트 리스너 등록 시작.');
+
+
 
       // 이미지 업로드 핸들러
       document.getElementById('imageUpload').addEventListener('change', function(event) {
@@ -297,10 +298,12 @@ Header END -->
           // 글 내용과 이미지 필드 가져오기
           const content = document.getElementById('content').value.trim(); 
           const location = document.getElementById('location').value; 
-          const tags = document.getElementById('tags').value;
+          const tagsInput = document.getElementById('tags').value;
 
           console.log('이미지 파일 개수:', imageFiles.length);
           console.log('게시물 내용:', content);
+          console.log('위치:', location);
+          console.log('태그:', tagsInput);
 
           // 필수 항목 체크
           if (imageFiles.length === 0) {
@@ -316,7 +319,9 @@ Header END -->
           const formData = new FormData(); 
           formData.append('content', content); 
           formData.append('location', location); 
-          formData.append('tags', tags); 
+
+          const tagsArray = tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag); // 쉼표로 분리하고 공백 제거
+          formData.append('tags', JSON.stringify(tagsArray)); // JSON 문자열로 변환하여 추가
 
           for (let i = 0; i < imageFiles.length; i++) {
               formData.append('images', imageFiles[i]);
@@ -324,7 +329,7 @@ Header END -->
 
           console.log('폼 데이터 준비 완료, 서버로 전송 시도');
 
-          fetch(`${API_BASE_URL}insta/posts/create/`, {
+          fetch(`${API_BASE_URL}/insta/posts/create/`, {
               method: 'POST',
               body: formData,
               credentials: 'include',
