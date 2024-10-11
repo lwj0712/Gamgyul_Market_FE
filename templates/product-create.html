@@ -360,7 +360,12 @@
             })
             .then(data => {
                 alert('상품이 성공적으로 등록되었습니다.');
-                window.location.href = 'product-list.html';
+                if (data.id) {
+                    window.location.href = `product-detail.html?id=${data.id}`;
+                } else {
+                    console.error('상품 ID가 반환되지 않았습니다.');
+                    window.location.href = 'product-list.html';
+                }
             })
             .catch(error => {
                 console.error('Error:', error);
