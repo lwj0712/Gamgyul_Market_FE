@@ -211,6 +211,11 @@
 <main class="container my-5">
     <h2>신고 제출</h2>
     <form id="report-form" method="post" action="#">
+        <!-- 콘텐츠 유형 (숨겨진 필드) -->
+        <input type="hidden" id="content_type" name="content_type" value="">
+        <!-- 콘텐츠 ID (숨겨진 필드) -->
+        <input type="hidden" id="object_id" name="object_id" value="">
+
         <!-- 신고 사유 -->
         <div class="mb-3">
             <label for="reason" class="form-label">신고 사유</label>
@@ -220,7 +225,6 @@
                 <option value="abuse">욕설/비방</option>
                 <option value="adult">성인 콘텐츠</option>
                 <option value="other">기타</option>
-                <!-- 필요에 따라 추가 옵션 -->
             </select>
         </div>
         <!-- 설명 -->
@@ -234,7 +238,7 @@
 </main>
 <!-- 신고 제출 폼 끝 -->
 
-<script src="/templates/header.js" defer></script>
+<script src="/templates/report-form.js" defer></script>
 
 </body>
 </html>
