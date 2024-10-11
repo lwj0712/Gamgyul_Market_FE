@@ -322,9 +322,9 @@ function displayProductDetails(product) {
 
     document.getElementById('product-name').textContent = product.name;
     document.getElementById('product-username').textContent = product.username;
-    document.getElementById('product-user-image').src = product.user_image;
+    document.getElementById('product-user-image').src = product.user.profile_image;
     document.getElementById('product-user-title').textContent = product.user_title;
-    document.getElementById('product-timestamp').textContent = product.timestamp;
+    document.getElementById('product-timestamp').textContent = product.created_at;
     document.getElementById('product-price').textContent = `${formattedPrice}`;
     document.getElementById('product-rating').textContent = product.average_rating != null ? product.average_rating.toFixed(1) : '평가 없음';
     document.getElementById('product-description').textContent = product.description;
@@ -334,7 +334,11 @@ function displayProductDetails(product) {
     document.getElementById('product-harvest-date').textContent = product.harvest_date;
 
     const userImage = document.getElementById('product-user-image');
-    userImage.src = product.user_image || DEFAULT_PROFILE_IMAGE;
+    if (product.user_profile_image) {
+        userImage.src = product.user_profile_image;
+    } else {
+        userImage.src = DEFAULT_PROFILE_IMAGE;
+    }
     userImage.onerror = function() {
         this.src = DEFAULT_PROFILE_IMAGE;
     };
@@ -361,16 +365,26 @@ function displayProductDetails(product) {
         img.className = 'img-fluid mb-2';
         productImages.appendChild(img);
     }
+
+    const currentUsername = getCurrentUsername();
+    const editDeleteButtons = document.querySelector('.mt-3');
+    if (currentUsername === product.username) {
+        editDeleteButtons.style.display = 'block';
+    } else {
+        editDeleteButtons.style.display = 'none';
+    }
 }
 
 function displayReviews(reviews) {
     const reviewList = document.getElementById('review-list');
+    reviewList.innerHTML = ''; // 기존 리뷰 목록을 초기화합니다.
+
     reviews.forEach(review => {
         const reviewElement = document.createElement('div');
         reviewElement.className = 'd-flex mb-4';
         reviewElement.innerHTML = `
             <div class="avatar avatar-xs">
-                <img src="${review.user_image || DEFAULT_PROFILE_IMAGE}" alt="${review.user}" class="avatar-img rounded-circle" onerror="this.src='${DEFAULT_PROFILE_IMAGE}'">
+                <img src="${review.user_profile_image || DEFAULT_PROFILE_IMAGE}" alt="${review.user}" class="avatar-img rounded-circle" onerror="this.src='${DEFAULT_PROFILE_IMAGE}'">
             </div>
             <div class="ms-2">
                 <div class="bg-light p-3 rounded">
@@ -487,9 +501,9 @@ async function handleReviewSubmit(event) {
             addReviewToList({
                 rating: result.data.rating,
                 content: result.data.content,
-                user: result.data.user.username,
-                timestamp: result.data.created_at,
-                user_image: result.data.user.profile_image || '/path/to/default/avatar.jpg'
+                user: result.data.user,
+                created_at: result.data.created_at,
+                user_image: result.data.user_image || DEFAULT_PROFILE_IMAGE
             });
             
             // 성공 메시지를 표시합니다
@@ -514,7 +528,11 @@ function addReviewToList(review) {
     reviewElement.className = 'd-flex mb-4';
     reviewElement.innerHTML = `
         <div class="avatar avatar-xs">
-            <img src="${review.user_image}" alt="${review.user}" class="avatar-img rounded-circle">
+            <img src="${getFullImageUrl(review.user_image)}" 
+                onerror="this.onerror=null; this.src='${DEFAULT_PROFILE_IMAGE}'; console.error('Image load failed:', this.src);"
+                onload="console.log('Image loaded successfully:', this.src)"
+                class="avatar-img rounded-circle me-2" 
+                style="width: 40px; height: 40px;">
         </div>
         <div class="ms-2">
             <div class="bg-light p-3 rounded">
