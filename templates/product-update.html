@@ -335,12 +335,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 이미지 미리보기 기능
     imageInput.addEventListener('change', function(event) {
-        imagePreview.innerHTML = ''; // 기존 미리보기 초기화
+        imagePreview.innerHTML = '';
         const files = event.target.files;
 
         if (files.length > 5) {
             alert('최대 5개의 이미지만 업로드 할 수 있습니다.');
-            event.target.value = ''; // 파일 선택 초기화
+            event.target.value = '';
             return;
         }
 
@@ -368,11 +368,9 @@ document.addEventListener('DOMContentLoaded', function() {
         ['name', 'price', 'description', 'stock', 'variety', 'growing_region', 'harvest_date']
             .forEach(field => formData.append(field, getValue(field)));
 
-        // 삭제할 이미지 처리
         document.querySelectorAll('input[name="images_to_delete"]:checked')
             .forEach(checkbox => formData.append('images_to_delete', checkbox.value));
 
-        // 새 이미지 처리
         if (imageInput.files) {
             Array.from(imageInput.files).slice(0, 5).forEach(file => formData.append('image', file));
         }

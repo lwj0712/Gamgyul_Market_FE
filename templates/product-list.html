@@ -264,7 +264,6 @@ let searchQuery = '';
 document.addEventListener('DOMContentLoaded', function() {
     loadProducts(currentPage, searchQuery);
 
-    // 검색 폼 제출 이벤트 리스너
     document.getElementById('search-form').addEventListener('submit', function(e) {
         e.preventDefault();
         searchQuery = document.getElementById('search-input').value;
@@ -288,7 +287,6 @@ function loadProducts(page, search) {
         .catch(error => console.error('Error:', error));
 }
 
-// Function to fetch products
 async function fetchProducts() {
     try {
         const response = await fetch(`${API_BASE_URL}/market/products/`);
@@ -300,10 +298,9 @@ async function fetchProducts() {
     }
 }
 
-// Function to display products
 function displayProducts(products) {
     const productList = document.getElementById('product-list');
-    productList.innerHTML = ''; // 기존 리스트를 초기화합니다.
+    productList.innerHTML = '';
 
     if (products.length === 0) {
         productList.innerHTML = '<p class="text-center">표시할 상품이 없습니다.</p>';
@@ -336,10 +333,10 @@ function displayPagination(data) {
     const pagination = document.getElementById('pagination');
     pagination.innerHTML = '';
 
-    const totalPages = Math.ceil(data.count / 10); // 10은 한 페이지당 아이템 수
+    const totalPages = Math.ceil(data.count / 10);
 
     if (totalPages <= 1) {
-        return; // 페이지가 1개 이하면 페이지네이션을 표시하지 않습니다.
+        return;
     }
 
     if (data.previous) {
@@ -395,7 +392,6 @@ function addPageButton(parent, pageNumber, text = pageNumber) {
     parent.appendChild(li);
 }
 
-// Fetch products when the page loads
 document.addEventListener('DOMContentLoaded', fetchProducts);
 </script>
 <script src="/templates/header.js" defer></script>

@@ -283,20 +283,16 @@
     </div>
 </main>
 
-<!-- Your custom JavaScript -->
 <script>
 const username = getCurrentUsername();
 const urlParams = new URLSearchParams(window.location.search);
 const productId = urlParams.get('id');
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Fetch and display product details
     fetchProductDetails();
 
-    // Handle review submission
     document.getElementById('review-form').addEventListener('submit', handleReviewSubmit);
 
-    // Add event listener for the edit button
     const editButton = document.getElementById('edit-button');
     if (editButton) {
         editButton.addEventListener('click', handleEditClick);
@@ -347,7 +343,7 @@ function displayProductDetails(product) {
     };
 
     const productImages = document.getElementById('product-images');
-    productImages.innerHTML = ''; // 기존 이미지 초기화
+    productImages.innerHTML = '';
 
     if (product.images && product.images.length > 0) {
         product.images.forEach(image => {
@@ -361,7 +357,6 @@ function displayProductDetails(product) {
             productImages.appendChild(img);
         });
     } else {
-        // 이미지가 없는 경우 기본 이미지 표시
         const img = document.createElement('img');
         img.src = DEFAULT_PROFILE_IMAGE;
         img.alt = '기본 제품 이미지';
@@ -380,7 +375,7 @@ function displayProductDetails(product) {
 
 function displayReviews(reviews) {
     const reviewList = document.getElementById('review-list');
-    reviewList.innerHTML = ''; // 기존 리뷰 목록을 초기화합니다.
+    reviewList.innerHTML = '';
 
     reviews.forEach(review => {
         const reviewElement = document.createElement('div');
@@ -404,7 +399,6 @@ function displayReviews(reviews) {
                     </div>
         `;
 
-        // 현재 사용자가 리뷰 작성자인 경우 삭제 버튼 추가
         if (review.user === username) {
             const deleteButton = document.createElement('button');
             deleteButton.className = 'btn btn-danger btn-sm ms-2 align-self-start delete-review';
@@ -416,7 +410,6 @@ function displayReviews(reviews) {
         reviewList.appendChild(reviewElement);
     });
 
-    // 삭제 버튼에 대한 이벤트 리스너 추가
     reviewList.addEventListener('click', function(e) {
         if (e.target.classList.contains('delete-review')) {
             const reviewId = e.target.dataset.reviewId;
@@ -427,10 +420,7 @@ function displayReviews(reviews) {
     });
 }
 
-// 리뷰 삭제 함수 (서버와의 통신을 위해 별도로 구현해야 함)
 function deleteReview(reviewId) {
-    // 여기에 서버와 통신하여 리뷰를 삭제하는 코드를 구현해야 합니다.
-    // 예를 들어:
     fetch(`${API_BASE_URL}/market/products/${productId}/reviews/${reviewId}/delete/`, {
         method: 'DELETE',
         headers: {
@@ -440,17 +430,13 @@ function deleteReview(reviewId) {
     })
     .then(response => {
         if (response.status === 204) {
-            // 204 No Content는 성공적인 삭제를 의미합니다
             return { status: 'success', message: '리뷰가 성공적으로 삭제되었습니다.' };
         } else if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        // 204가 아닌 다른 성공 상태 코드의 경우 (예: 200)
         return response.json();
     })
     .then(data => {
-        console.log('Response:', data.message);
-        // UI에서 해당 리뷰 제거
         const reviewElement = document.querySelector(`[data-review-id="${reviewId}"]`);
         if (reviewElement) {
             reviewElement.remove();
@@ -466,7 +452,6 @@ function deleteReview(reviewId) {
 async function handleReviewSubmit(event) {
     event.preventDefault();
     
-    // 입력된 별점과 리뷰 내용을 가져옵니다
     const ratingElement = document.getElementById('review-rating');
     const contentElement = document.getElementById('review-content');
     const urlParams = new URLSearchParams(window.location.search);
@@ -482,7 +467,6 @@ async function handleReviewSubmit(event) {
     const content = contentElement.value;
     
     try {
-        // 백엔드로 리뷰 데이터를 전송합니다
         const response = await fetch(`${API_BASE_URL}/market/products/${productId}/`, {
             method: 'POST',
             headers: {
@@ -503,7 +487,6 @@ async function handleReviewSubmit(event) {
         console.log('서버 응답:', result);
         
         if (result.status === 'success') {
-            // 서버로부터 받은 데이터로 리뷰를 페이지에 추가합니다
             addReviewToList({
                 rating: result.data.rating,
                 content: result.data.content,
@@ -512,10 +495,8 @@ async function handleReviewSubmit(event) {
                 user_image: result.data.user_image || DEFAULT_PROFILE_IMAGE
             });
             
-            // 성공 메시지를 표시합니다
             alert('리뷰가 성공적으로 등록되었습니다!');
             
-            // 폼을 초기화합니다
             document.getElementById('review-content').value = '';
             document.getElementById('review-rating').value = '';
         } else {
@@ -586,7 +567,7 @@ document.addEventListener('DOMContentLoaded', function() {
       .then(response => {
         if (response.ok) {
           alert('상품이 성공적으로 삭제되었습니다.');
-          window.location.href = 'product-list.html'; // 상품 목록 페이지로 리다이렉트
+          window.location.href = 'product-list.html';
         } else {
           alert('상품 삭제에 실패했습니다. 다시 시도해주세요.');
         }
