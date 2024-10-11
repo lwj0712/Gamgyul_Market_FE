@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return csrfCookie ? csrfCookie.split('=')[1] : null;
     }
 
-    async function fetchWithCSRF(url, method = 'GET', body = null) {
+    async function fetchWithCSRF(url, method = 'GET', body = null) { 
         const csrfToken = getCSRFToken();
         if (!csrfToken) {
             throw new Error('CSRF token not found');
@@ -77,6 +77,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = await fetchWithCSRF(`${API_BASE_URL}/accounts/profile/${username}/`);
             if (response.ok) {
                 const profileData = await response.json();
+                userId = profileData.id; 
                 console.log('Received profile data:', profileData); // 추가된 로그
                 updateProfileUI(profileData);
             } else if (response.status === 401) {
@@ -222,9 +223,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
                 <div>
                     ${!isCurrentUser ? `
-                        <button class="btn btn-sm btn-primary-soft me-2 chat-btn" data-user-id="${user.id}">
-                            <i class="bi bi-chat-left-text"></i>
-                        </button>
                         <button class="btn btn-sm ${type === 'following' ? 'btn-danger-soft unfollow-btn' : 'btn-success-soft follow-btn'}" data-user-id="${user.id}">
                             ${type === 'following' ? '언팔로우' : '팔로우'}
                         </button>
@@ -267,7 +265,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Event Handlers
     async function handleFollow() {
         try {
-            const response = await fetchWithCSRF(`${API_BASE_URL}/accounts/follow/${username}/`, 'POST');
+            const response = await fetchWithCSRF(`${API_BASE_URL}/accounts/follow/${userId}/`, 'POST');
             if (response.ok) {
                 loadProfile();
             } else {
@@ -335,12 +333,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function handleChat(event) {
-        const userId = event.target.closest('button').getAttribute('data-user-id');
-        console.log(`Chat with user ${userId}`);
-        // 채팅 기능 구현 (예: 채팅 페이지로 이동)
-    }
-
     // Search Functions
     async function searchUsers(query) {
         try {
@@ -383,10 +375,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Helper Functions
     function addUserInteractionListeners() {
-        document.querySelectorAll('.chat-btn').forEach(button => {
-            button.addEventListener('click', handleChat);
-        });
-
         document.querySelectorAll('.follow-btn, .unfollow-btn').forEach(button => {
             button.addEventListener('click', handleFollowUnfollow);
         });
