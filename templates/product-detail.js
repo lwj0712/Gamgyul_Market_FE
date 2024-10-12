@@ -202,7 +202,6 @@ async function handleReviewSubmit(event) {
         }
         
         const result = await response.json();
-        console.log('서버 응답:', result);
         
         if (result.status === 'success') {
             addReviewToList({
@@ -210,7 +209,7 @@ async function handleReviewSubmit(event) {
                 content: result.data.content,
                 user: result.data.user,
                 created_at: result.data.created_at,
-                user_image: result.data.user_image || DEFAULT_PROFILE_IMAGE
+                user_image: result.data.user_profile_image || DEFAULT_PROFILE_IMAGE
             });
             
             alert('리뷰가 성공적으로 등록되었습니다!');
@@ -235,7 +234,6 @@ function addReviewToList(review) {
         <div class="avatar avatar-xs">
             <img src="${getFullImageUrl(review.user_image)}" 
                 onerror="this.onerror=null; this.src='${DEFAULT_PROFILE_IMAGE}'; console.error('Image load failed:', this.src);"
-                onload="console.log('Image loaded successfully:', this.src)"
                 class="avatar-img rounded-circle me-2" 
                 style="width: 40px; height: 40px;">
         </div>
