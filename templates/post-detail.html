@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-	<title>감귤하우스 - 게시물 작성</title>
+	<title>감귤하우스 - 게시물 수정, 삭제</title>
 
 	<!-- Meta Tags -->
 	<meta charset="utf-8">
@@ -232,7 +232,7 @@ Header END -->
   </div>
 
   <!-- Form for additional details -->
-  <form id= "postForm" class="row g-4 w-100"> 
+  <form id= "postDetailsForm" class="row g-4 w-100"> 
     <div class="card card-body my-3" style="margin-left: 110px; margin-right: 90px;">
       <!-- Location -->
       <div class="col-12 mb-3">
@@ -246,7 +246,8 @@ Header END -->
       </div>
       <!-- Submit Button -->
       <div class="col-12 text-end">
-          <button type="submit" class="btn btn-primary">작성</button>
+          <button type="submit" class="btn btn-primary">수정</button>
+          <button type="button" id="deleteButton" class="btn btn-danger ms-2">삭제</button>
       </div>
   </form>
   <!-- Form END -->
@@ -261,12 +262,53 @@ Header END -->
 <script src='post-create.js'></script>
 <script>
   let imageFiles = [];
+  let existingImages = []; // 기존 이미지 목록을 저장할 변수
+  const urlParams = new URLSearchParams(window.location.search);
+  const postId = urlParams.get('postId');
+  console.log('게시물 ID:', postId);
 
   // DOM이 완전히 로드된 후 실행
   document.addEventListener('DOMContentLoaded', function() {
       console.log('DOM 로드 완료, 이벤트 리스너 등록 시작.');
 
+      // 게시물 데이터 로드
+      fetch(`${API_BASE_URL}/insta/posts/${postId}/`)
+          .then(response => {
+              if (!response.ok) {
+                  throw new Error('Network response was not ok');
+              }
+              return response.json();
+          })
+          .then(data => {
+              // 기존 데이터로 폼 초기화
+              document.getElementById('content').value = data.content || '';
+              document.getElementById('location').value = data.location || '';
+              document.getElementById('tags').value = data.tags && data.tags.length > 0 ? JSON.parse(data.tags[0]) : [];
 
+              // 기존 이미지 파일 목록 표시
+              const fileList = document.getElementById('fileList');
+              fileList.innerHTML = ''; // 초기화
+              existingImages = data.images || []; // 기존 이미지 목록 저장
+
+              console.log('API 응답:', data); // 데이터 구조 확인을 위한 로그 출력
+
+              // 기존 이미지 파일명 표시
+              if (existingImages.length > 0) {
+                  existingImages.forEach(image => {
+                      const listItem = document.createElement('li');
+                      listItem.textContent = image.split('/').pop(); // 파일명만 표시
+                      fileList.appendChild(listItem);
+                  });
+              } else {
+                  const noImagesItem = document.createElement('li');
+                  noImagesItem.textContent = '첨부된 이미지가 없습니다.'; // 이미지가 없을 경우 메시지 표시
+                  fileList.appendChild(noImagesItem);
+              }
+          })
+          .catch(error => {
+              console.error('데이터를 로드하는 중 오류가 발생했습니다:', error);
+              alert('게시물 데이터를 로드하는 중 오류가 발생했습니다.');
+          });
 
       // 이미지 업로드 핸들러
       document.getElementById('imageUpload').addEventListener('change', function(event) {
@@ -281,19 +323,21 @@ Header END -->
 
           imageFiles = [...imageFiles, ...selectedFiles];
           const fileList = document.getElementById('fileList');
-          fileList.innerHTML = ''; 
+          fileList.innerHTML = ''; // 초기화
 
-          for (let i = 0; i < imageFiles.length; i++) {
+          // 기존 이미지와 새로운 이미지 모두 표시
+          const allImages = [...existingImages, ...imageFiles]; // existingImages와 imageFiles를 합침
+          allImages.forEach(file => {
               const listItem = document.createElement('li');
-              listItem.textContent = imageFiles[i].name;
+              listItem.textContent = file instanceof File ? file.name : file.split('/').pop(); // 파일명이거나 기존 이미지 URL에서 파일명만 추출
               fileList.appendChild(listItem);
-          }
+          });
       });
 
-      // 게시물 작성 핸들러
-      document.getElementById('postForm').addEventListener('submit', function(e) {
+      // 게시물 수정 핸들러
+      document.getElementById('postDetailsForm').addEventListener('submit', function(e) {
           e.preventDefault();
-          console.log('게시물 작성 버튼 클릭됨');
+          console.log('게시물 수정 버튼 클릭됨');
 
           // 글 내용과 이미지 필드 가져오기
           const content = document.getElementById('content').value.trim(); 
@@ -306,11 +350,6 @@ Header END -->
           console.log('태그:', tagsInput);
 
           // 필수 항목 체크
-          if (imageFiles.length === 0) {
-              alert('이미지를 첨부해 주세요.'); // 이미지가 없을 경우 경고
-              return;
-          }
-
           if (!content) {
               alert('글 내용을 작성해 주세요.'); // 내용이 없을 경우 경고
               return;
@@ -323,14 +362,21 @@ Header END -->
           const tagsArray = tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag); // 쉼표로 분리하고 공백 제거
           formData.append('tags', JSON.stringify(tagsArray)); // JSON 문자열로 변환하여 추가
 
-          for (let i = 0; i < imageFiles.length; i++) {
-              formData.append('images', imageFiles[i]);
+          // 새로운 이미지를 첨부한 경우에만 추가
+          if (imageFiles.length > 0) {
+              imageFiles.forEach(file => {
+                  formData.append('images', file);
+              });
           }
 
           console.log('폼 데이터 준비 완료, 서버로 전송 시도');
+          console.log('폼 데이터 내용:');
+          for (let [key, value] of formData.entries()) {
+              console.log(key + ':', value);
+          }
 
-          fetch(`${API_BASE_URL}/insta/posts/create/`, {
-              method: 'POST',
+          fetch(`${API_BASE_URL}/insta/posts/${postId}/`, {
+              method: 'PATCH',
               body: formData,
               credentials: 'include',
               headers: {
@@ -344,15 +390,40 @@ Header END -->
               return response.json();
           })
           .then(data => {
-              alert('게시물이 성공적으로 작성되었습니다.');
+              alert('게시물이 성공적으로 수정되었습니다.');
               window.location.href = 'index.html';  
           })
           .catch(error => {
               console.error('Error:', error);
-              alert('게시물 작성 중 오류가 발생했습니다.');
+              alert('게시물 수정 중 오류가 발생했습니다.');
           });
       });
 
+      // 삭제 버튼 클릭 이벤트
+      document.getElementById('deleteButton').addEventListener('click', function() {
+          if (confirm('정말로 이 게시물을 삭제하시겠습니까?')) {
+              fetch(`${API_BASE_URL}/insta/posts/${postId}/delete/`, {
+                  method: 'DELETE',
+                  credentials: 'include',
+                  headers: {
+                      'X-CSRFToken': getCSRFToken(),
+                  }
+              })
+              .then(response => {
+                  if (!response.ok) {
+                      throw new Error('Network response was not ok');
+                  }
+                  alert('게시물이 삭제되었습니다.');
+                  window.location.href = 'index.html'; // 게시물 목록으로 이동
+              })
+              .catch(error => {
+                  console.error('Error:', error);
+                  alert('게시물 삭제 중 오류가 발생했습니다.');
+              });
+          }
+      });
+
+      // CSRF 토큰 가져오기
       function getCSRFToken() {
           return document.cookie.split('; ')
               .find(row => row.startsWith('csrftoken='))
@@ -360,7 +431,6 @@ Header END -->
       }
   });
 </script>
-
 
 </body>
 </html>
