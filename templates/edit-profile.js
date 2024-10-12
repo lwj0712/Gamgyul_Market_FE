@@ -66,6 +66,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (response.ok) {
                 const updatedProfile = await response.json();
+                localStorage.setItem('username', updatedProfile.username);
                 alert('프로필이 성공적으로 수정되었습니다.');
                 window.location.href = `/templates/profile.html?username=${updatedProfile.username}`;
             } else {
