@@ -263,8 +263,9 @@
                         </div>
                     
                         <div class="mb-3">
-                            <label for="image">이미지 업로드 (최대 5장)</label>
-                            <input type="file" name="image" id="image" multiple accept="image/*" class="form-control">
+                            <label for="images" class="form-label">이미지 업로드 (최대 5장)</label>
+                            <input type="file" name="images[]" id="images" multiple accept="image/*" class="form-control">
+                            <div id="imagePreview"></div>
                         </div>
                     
                         <button type="submit" class="btn btn-primary">상품 생성</button>
@@ -276,73 +277,7 @@
     </section>
 </main>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const form = document.getElementById('productForm');
-        if (!form) {
-            console.error('Form with id "productForm" not found');
-            return;
-        }
-    
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-        
-            const formData = new FormData();
-    
-            // Helper function to safely get element value
-            const getValue = (id) => {
-                const element = document.getElementById(id);
-                return element ? element.value : '';
-            };
-    
-            formData.append('name', getValue('name'));
-            formData.append('price', getValue('price'));
-            formData.append('description', getValue('description'));
-            formData.append('stock', getValue('stock'));
-            formData.append('variety', getValue('variety'));
-            formData.append('growing_region', getValue('region')); // Changed from 'region' to 'growing_region'
-            formData.append('harvest_date', getValue('harvestDate')); // Changed from 'harvestDate' to 'harvest_date'
-        
-            const imageInput = document.getElementById('image');
-            if (imageInput && imageInput.files) {
-                for (let i = 0; i < Math.min(imageInput.files.length, 5); i++) {
-                    formData.append('image', imageInput.files[i]); // Changed from 'images' to 'image'
-                }
-            }
-        
-            fetch(`${API_BASE_URL}/market/products/create/`, {
-                method: 'POST',
-                body: formData,
-                credentials: 'include',
-                headers: {
-                    'X-CSRFToken': getCSRFToken(),
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(data => {
-                        throw new Error(JSON.stringify(data));
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                alert('상품이 성공적으로 등록되었습니다.');
-                window.location.href = 'product-list.html';
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert(`상품 등록 중 오류가 발생했습니다: ${error.message}`);
-            });
-        });
-        
-        function getCSRFToken() {
-            return document.cookie.split('; ')
-                .find(row => row.startsWith('csrftoken='))
-                ?.split('=')[1] || '';
-        }
-    });
-    </script>
+<script src="/templates/product-create.js"></script>
 <script src="/templates/header.js" defer></script>
     
 
