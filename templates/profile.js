@@ -85,7 +85,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (response.ok) {
                 const profileData = await response.json();
                 userId = profileData.id; 
-                console.log('Received profile data:', profileData);
                 updateProfileUI(profileData);
             } else if (response.status === 401) {
                 showLoginLink();
@@ -247,7 +246,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="col-sm-6 col-lg-4">
                     <div class="card h-100">
                         <div class="position-relative">
-                            <img src="${post.images[0] || DEFAULT_PROFILE_IMAGE}" class="card-img-top" alt="게시물 이미지">
+                            <img src="${post.images[0] ? `${API_BASE_URL}${post.images[0]}` : DEFAULT_PROFILE_IMAGE}" class="card-img-top" alt="게시물 이미지">
                         </div>
                         <div class="card-body">
                             <h5 class="card-title">${post.content.substring(0, 50)}${post.content.length > 50 ? '...' : ''}</h5>
