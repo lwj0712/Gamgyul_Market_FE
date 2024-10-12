@@ -28,12 +28,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const viewProfileLink = document.getElementById('view-profile-link');
     const profileSettingsLink = document.getElementById('profile-settings-link');
     const postList = document.getElementById('post-list');
+    const notificationCount = document.getElementById('notification-count');
+    const notificationBadge = document.getElementById('notification-badge');
+    const notificationList = document.getElementById('notification-list');
+    const clearAllNotificationsBtn = document.getElementById('clear-all-notifications');
 
     // State
     const urlParams = new URLSearchParams(window.location.search);
     const username = urlParams.get('username');
     let allFollowers = [];
     let allFollowing = [];
+    let currentUserId;
+    let notifications = [];
 
     // Utility Functions
     function getCurrentUsername() {
@@ -79,7 +85,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (response.ok) {
                 const profileData = await response.json();
                 userId = profileData.id; 
-                console.log('Received profile data:', profileData); // 추가된 로그
+                console.log('Received profile data:', profileData);
                 updateProfileUI(profileData);
             } else if (response.status === 401) {
                 showLoginLink();
@@ -497,4 +503,217 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize
     initialize();
+
+    // Notification Functions
+    async function fetchCurrentUserInfo() {
+        try {
+            const response = await fetchWithCSRF(`${API_BASE_URL}/accounts/current-user/`);
+            if (response.ok) {
+                const userData = await response.json();
+                currentUserId = userData.id;
+                return userData;
+            } else {
+                throw new Error('Failed to fetch current user info');
+            }
+        } catch (error) {
+            console.error('Error fetching current user info:', error);
+            showErrorMessage('사용자 정보를 불러오는 데 실패했습니다.');
+        }
+    }
+
+    function updateNotificationCount() {
+        const count = notifications.length;
+        if (notificationCount) notificationCount.textContent = count;
+        if (notificationBadge) notificationBadge.style.display = count > 0 ? 'inline' : 'none';
+    }
+
+    function renderNotifications() {
+        console.log('Notifications data:', notifications);
+
+        if (!Array.isArray(notifications)) {
+            console.error('notifications is not an array:', notifications);
+            return;
+        }
+
+        if (!notificationList) {
+            console.error('Notification list element not found');
+            return;
+        }
+
+        notificationList.innerHTML = '';
+        notifications.forEach((notification) => {
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <div class="list-group-item list-group-item-action rounded d-flex border-0 mb-1 p-3">
+                    <div class="avatar text-center d-none d-sm-inline-block">
+                        <img class="avatar-img rounded-circle" src="${getFullImageUrl(notification.sender.profile_image)}" alt="">
+                    </div>
+                    <div class="ms-sm-3 d-flex">
+                        <div>
+                            <p class="small mb-2">${notification.message}</p>
+                            <p class="small ms-3">${new Date(notification.created_at).toLocaleString()}</p>
+                        </div>
+                        <button class="btn btn-sm btn-danger-soft ms-auto" onclick="deleteNotification('${notification.id}')">삭제</button>
+                    </div>
+                </div>
+            `;
+            notificationList.appendChild(li);
+        });
+        updateNotificationCount();
+    }
+
+    async function fetchNotifications() {
+        try {
+            const response = await fetchWithCSRF(`${API_BASE_URL}/alarm/`);
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Server response:', data);
+                
+                notifications = Array.isArray(data) ? data : (data.results || []);
+                
+                renderNotifications();
+            } else {
+                throw new Error('알림 가져오기 실패');
+            }
+        } catch (error) {
+            console.error('Error fetching notifications:', error);
+            showErrorMessage('알림을 불러오는 데 실패했습니다.');
+        }
+    }
+
+    async function deleteNotification(notificationId) {
+        try {
+            const response = await fetchWithCSRF(`${API_BASE_URL}/alarm/${notificationId}/delete/`, 'DELETE');
+            if (response.ok) {
+                notifications = notifications.filter(n => n.id !== notificationId);
+                renderNotifications();
+            } else {
+                throw new Error('알림 삭제 실패');
+            }
+        } catch (error) {
+            console.error('Error deleting notification:', error);
+            showErrorMessage('알림 삭제 중 오류가 발생했습니다.');
+        }
+    }
+
+    async function clearAllNotifications() {
+        try {
+            const response = await fetchWithCSRF(`${API_BASE_URL}/alarm/delete-all/`, 'DELETE');
+            if (response.ok) {
+                notifications = [];
+                renderNotifications();
+            } else {
+                throw new Error('모든 알림 삭제 실패');
+            }
+        } catch (error) {
+            console.error('Error clearing all notifications:', error);
+            showErrorMessage('모든 알림 삭제 중 오류가 발생했습니다.');
+        }
+    }
+
+    function setupWebSocket() {
+        if (!currentUserId) {
+            console.error('Current user ID is not available');
+            return;
+        }
+
+        const socket = new WebSocket(`ws://${API_BASE_URL.replace('http://', '')}/ws/alarm/${currentUserId}/`);
+
+        socket.onopen = function(e) {
+            console.log('WebSocket 연결 성공');
+        };
+
+        socket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            if (data.alarm) {
+                notifications.unshift(data.alarm);
+                renderNotifications();
+            }
+        };
+
+        socket.onclose = function(e) {
+            console.error('Alarm socket closed unexpectedly');
+            setTimeout(() => setupWebSocket(), 5000);
+        };
+
+        socket.onerror = function(e) {
+            console.error('WebSocket error occurred', e);
+        };
+    }
+
+    // Initialization
+    async function init() {
+        try {
+            const userData = await fetchCurrentUserInfo();
+            if (userData) {
+                updateProfileDropdown(userData);
+                setupWebSocket();
+                await fetchNotifications();
+                await loadProfile();
+                await loadLoggedInUserProfile();
+            } else {
+                throw new Error('Failed to initialize user data');
+            }
+        } catch (error) {
+            console.error('Error initializing application:', error);
+            showErrorMessage('애플리케이션을 초기화하는 데 실패했습니다.');
+        }
+    }
+
+    // Event Listeners
+    editProfileBtn.addEventListener('click', () => {
+        window.location.href = '/templates/edit-profile.html';
+    });
+
+    if (profileSettingsBtn) {
+        profileSettingsBtn.addEventListener('click', () => {
+            const currentUsername = getCurrentUsername();
+            window.location.href = `/templates/profile-settings.html?username=${currentUsername}`;
+        });
+    }
+
+    if (profileSettingsLink) {
+        profileSettingsLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            const currentUsername = getCurrentUsername();
+            window.location.href = `/templates/profile-settings.html?username=${currentUsername}`;
+        });
+    }
+
+    followBtn.addEventListener('click', handleFollow);
+    signOutLink.addEventListener('click', handleLogout);
+
+    if (clearAllNotificationsBtn) {
+        clearAllNotificationsBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            clearAllNotifications();
+        });
+    }
+
+    searchInput.addEventListener('input', function() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            const query = this.value.trim();
+            if (query.length > 0) {
+                searchUsers(query);
+            } else {
+                searchResults.style.display = 'none';
+            }
+        }, 300);
+    });
+
+    document.addEventListener('click', function(event) {
+        if (!searchResults.contains(event.target) && event.target !== searchInput) {
+            searchResults.style.display = 'none';
+        }
+    });
+
+    // Initialize
+    init();
+
+    // 주기적으로 알림 업데이트 (선택사항)
+    setInterval(fetchNotifications, 60000); // 1분마다 업데이트
 });
+    
+// 전역 스코프에 deleteNotification 함수 추가
+window.deleteNotification = deleteNotification;
