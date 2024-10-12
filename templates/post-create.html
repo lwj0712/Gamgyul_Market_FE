@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-	<title>감귤하우스</title>
+	<title>감귤하우스 - 게시물 작성</title>
 
 	<!-- Meta Tags -->
 	<meta charset="utf-8">
@@ -66,7 +66,7 @@
 
 			}
 		})
-		
+
 	</script>
 
 	<!-- Favicon -->
@@ -220,7 +220,7 @@ Header END -->
       <!-- Share feed toolbar START -->
       <ul class="nav nav-pills nav-stack small fw-normal">
         <li class="nav-item">
-          <input type="file" accept="image/*" id="imageUpload" style="display: none;" mjltiple />
+          <input type="file" accept="image/*" id="imageUpload" style="display: none;" multiple />
           <label for="imageUpload" class="nav-link bg-light py-1 px-2 mb-0" style="cursor: pointer;">
               <i class="bi bi-image-fill"></i> 이미지 추가
           </label>
@@ -345,7 +345,7 @@ Header END -->
           })
           .then(data => {
               alert('게시물이 성공적으로 작성되었습니다.');
-              window.location.href = 'index-main.html';  
+              window.location.href = 'index.html';  
           })
           .catch(error => {
               console.error('Error:', error);
