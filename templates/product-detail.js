@@ -1,8 +1,16 @@
 const username = getCurrentUsername();
 const urlParams = new URLSearchParams(window.location.search);
 const productId = urlParams.get('id');
+let currentUserId;
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+    const currentUser = await getCurrentUser();
+    if (currentUser) {
+        currentUserId = currentUser.id;
+    } else {
+        console.log('로그인되지 않았거나 사용자 정보를 가져오는데 실패했습니다.');
+    }
+
     fetchProductDetails();
 
     document.getElementById('review-form').addEventListener('submit', handleReviewSubmit);
@@ -80,7 +88,7 @@ function displayProductDetails(product) {
 
     const currentUsername = getCurrentUsername();
     const editDeleteButtons = document.querySelector('.mt-3');
-    if (currentUsername === product.username) {
+    if (currentUserId === product.user_id) {
         editDeleteButtons.style.display = 'block';
     } else {
         editDeleteButtons.style.display = 'none';
@@ -110,7 +118,7 @@ function displayReviews(reviews) {
             </div>
         `;
 
-        if (review.user === username) {
+        if (review.user_id === currentUserId) {
             const deleteButton = document.createElement('button');
             deleteButton.className = 'btn btn-danger btn-sm ms-2 align-self-start delete-review';
             deleteButton.textContent = '삭제';
@@ -148,7 +156,7 @@ function deleteReview(reviewId) {
         return response.json();
     })
     .then(data => {
-        const reviewElement = document.querySelector(`[data-review-id="${reviewId}"]`);
+        const reviewElement = document.querySelector(`[data-review-id="${reviewId}"]`).closest('.d-flex.mb-4');
         if (reviewElement) {
             reviewElement.remove();
         }
@@ -298,9 +306,25 @@ function getCSRFToken() {
 }
 
 function getCurrentUsername() {
-        return localStorage.getItem('username') || '';
-    }
+    return localStorage.getItem('username') || '';
+}
 
+async function getCurrentUser() {
+    try {
+        const response = await fetch('http://127.0.0.1:8000/accounts/current-user/', {
+            method: 'GET',
+            credentials: 'include'  // 쿠키를 포함시키기 위해 필요
+        });
+        if (!response.ok) {
+            throw new Error('사용자 정보를 가져오는데 실패했습니다.');
+        }
+        const userData = await response.json();
+        return userData;
+    } catch (error) {
+        console.error('현재 사용자 정보 가져오기 오류:', error);
+        return null;
+    }
+}
     
 document.addEventListener('DOMContentLoaded', function() {
 
