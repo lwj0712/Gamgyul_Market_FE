@@ -32,7 +32,7 @@ async function fetchWithCSRF(url, method = 'GET', body = null) {
             'Content-Type': 'application/json'
         }
     };
-
+    
     if (body) {
         options.body = JSON.stringify(body);
     }
@@ -45,7 +45,7 @@ async function fetchWithCSRF(url, method = 'GET', body = null) {
     if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return await response.json();
+    return await response.json();  // 여기서 JSON 파싱
 }
 
 function getFullImageUrl(imageUrl) {
@@ -163,19 +163,18 @@ function setupChatWebSocket(roomId) {
         socket.close();
     }
     console.log('Setting up WebSocket for room:', roomId);
-    socket = new WebSocket(`ws://127.0.0.1:8000/ws/chat/${roomId}/`);
+    socket = new WebSocket(`ws://${API_BASE_URL.replace('http://', '')}/ws/chat/${roomId}/`);
     
     socket.onmessage = function(e) {
         const data = JSON.parse(e.data);
         console.log('WebSocket message received:', data);
-        if (data.message) {
+        if (data.type === 'chat_message') {
             console.log('Calling addMessage from WebSocket');
             addMessage({
-                id: data.id,
+                id: data.message_id,
                 content: data.message,
                 sender: data.sender,
-                image: data.image,
-                sent_at: data.sent_at || new Date().toISOString(),
+                sent_at: data.sent_at,
                 is_read: data.is_read
             });
         }
@@ -202,14 +201,17 @@ function addMessage({ id, content, sender, image, sent_at, is_read }) {
     const readStatusIcon = isSentByCurrentUser ? 
     `<i class="bi ${is_read ? 'bi-check-all text-primary' : 'bi-check'} ms-1"></i>` : '';
 
+    const senderUsername = sender ? (sender.username || 'Unknown') : 'Unknown';
+    const senderProfileImage = sender ? getFullImageUrl(sender.profile_image) : DEFAULT_PROFILE_IMAGE;
+
     messageElement.innerHTML = `
         <div class="d-flex ${isSentByCurrentUser ? 'flex-row-reverse' : 'flex-row'} align-items-start">
             <div class="avatar avatar-xs ${isSentByCurrentUser ? 'ms-2' : 'me-2'}">
-                <img src="${sender ? getFullImageUrl(sender.profile_image) : DEFAULT_PROFILE_IMAGE}" alt="${sender ? sender.username : 'Unknown'}" class="avatar-img rounded-circle">
+                <img src="${senderProfileImage}" alt="${senderUsername}" class="avatar-img rounded-circle">
             </div>
             <div class="card ${isSentByCurrentUser ? 'bg-warning-subtle' : 'bg-light'}">
                 <div class="card-body p-2">
-                    <p class="small mb-0 ${isSentByCurrentUser ? 'text-dark' : ''}">${sender ? sender.username : 'Unknown'}</p>
+                    <p class="small mb-0 ${isSentByCurrentUser ? 'text-dark' : ''}">${senderUsername}</p>
                     <p class="mb-0 ${isSentByCurrentUser ? 'text-dark' : ''}">${content}</p>
                     <div class="d-flex justify-content-between align-items-center">
                         <small class="${isSentByCurrentUser ? 'text-muted-dark' : 'text-muted'}">${formattedDate}</small>
@@ -239,6 +241,15 @@ async function sendMessage(content) {
 
         if (response && response.id) {
             document.getElementById('message-input').value = '';
+            // 현재 사용자 정보를 가져와서 sender로 사용
+            const currentUser = await fetchCurrentUserInfo();
+            addMessage({
+                id: response.id,
+                content: content,
+                sender: currentUser,
+                sent_at: response.sent_at,
+                is_read: false
+            });
             console.log('Message sent successfully, waiting for WebSocket broadcast');
         } else {
             throw new Error('Message not saved properly');
@@ -392,10 +403,10 @@ function renderNotifications() {
 async function fetchNotifications() {
     try {
         const response = await fetchWithCSRF(`${API_BASE_URL}/alarm/`);
-        const data = await response.json();
-        console.log('Server response:', data);
+        console.log('Server response:', response);
         
-        notifications = Array.isArray(data) ? data : (data.results || []);
+        // response가 이미 JSON 객체인 경우를 처리
+        notifications = Array.isArray(response) ? response : (response.results || []);
         
         renderNotifications();
     } catch (error) {
