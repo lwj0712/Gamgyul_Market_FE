@@ -1,7 +1,6 @@
 const username = getCurrentUsername();
 const urlParams = new URLSearchParams(window.location.search);
 const productId = urlParams.get('id');
-let currentUserId;
 
 document.addEventListener('DOMContentLoaded', async function() {
     const currentUser = await getCurrentUser();
