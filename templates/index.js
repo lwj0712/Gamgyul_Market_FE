@@ -38,9 +38,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 게시물 표시 함수
     function displayPosts(posts) {
+        console.log(posts);
+
         posts.forEach(post => {
             const postElement = document.createElement('div');
             postElement.classList.add('card');
+            
+            console.log(post.tags);
+
             postElement.innerHTML = `
                 <div class="card-header border-0 pb-0">
                     <div class="d-flex align-items-center justify-content-between">
@@ -65,15 +70,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 <!-- Card body -->
                 <div class="card-body post-detail-link" data-post-id="${post.id}">
                     <p>${post.content}</p>
-                    ${post.images && post.images.length > 0 ? `<img src="${post.images[0]}" class="card-img" alt="Post image">` : ''}
+                    <div>
+                        <img src="${post.images[0] ? `${API_BASE_URL}${post.images[0]}` : '/path/to/default/image.jpg'}" class="card-img-top" alt="Post image">
+                    </div>
                 </div>
                 <!-- Card feed action START -->
-                <ul class="nav nav-stack py-3 small">
+                <!-- 태그 표시 부분 -->
+                ${post.tags && post.tags.length > 0 ? `
+                    <ul class="nav nav-stack py-3 small ms-4">
+                        ${post.tags.replace(/\[|\]|\"/g, '').split(',').map(tag => `
+                            <li class="nav-item d-flex justify-content-between">
+                                <span class="badge bg-primary me-1">${tag.trim()}</span>
+                            </li>
+                        `).join('')}
+                    </ul>
+                ` : ''}
+                <ul class="nav nav-stack py-3 small ms-4">
                     <li class="nav-item">
-                        <a class="nav-link active like-button" href="#!" data-post-id="${post.id}" data-likes-count="${post.likes_count}"> <i class="bi bi-hand-thumbs-up-fill pe-1"></i>좋아요 (<span class="likes-count">${post.likes_count}</span>)</a>
+                        <a class="nav-link active like-button" href="#!" data-post-id="${post.id}" data-likes-count="${post.likes_count}">
+                            <i class="bi bi-hand-thumbs-up-fill pe-1"></i>좋아요 (<span class="likes-count">${post.likes_count}</span>)
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link comment-button" href="#!" data-post-id="${post.id}"> <i class="bi bi-chat-fill pe-1"></i>댓글 (${post.comments.length})</a>
+                        <a class="nav-link comment-button" href="#!" data-post-id="${post.id}"> <i class="bi bi-chat-fill pe-1"></i>댓글 (${post.comments.length})
+                        </a>
                     </li>
                 </ul>
                 <!-- Card feed action END -->
