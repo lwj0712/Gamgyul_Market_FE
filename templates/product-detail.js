@@ -248,7 +248,7 @@ function addReviewToList(review) {
             </div>
         </div>
     `;
-    reviewList.prepend(reviewElement);
+    reviewList.appendChild(reviewElement);
 }
 
 function handleEditClick(e) {
