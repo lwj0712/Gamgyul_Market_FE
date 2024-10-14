@@ -227,48 +227,73 @@ Header END -->
 <!-- **************** MAIN CONTENT START **************** -->
 <main>
 	<div class="container">
-	  <div class="row g-4">
+	    <div class="row g-4">
 		<div class="col-md-8 col-lg-6 vstack gap-4">
-		  <!-- Post list START -->
-		  <div id="post-list">
+		    <!-- Post list START -->
+		    <div id="post-list">
 			<!-- Posts will be dynamically added here -->
-		  </div>
-		  <!-- Post list END -->
+		    </div>
+		    <!-- Post list END -->
 		</div>
 		<!-- Main content END -->
-  
+		
 		<!-- Right sidebar START -->
 		<div class="col-lg-3">
-		  <div class="row g-4">
+		    <div class="row g-4">
 			<!-- Card follow START -->
 			<div class="col-sm-6 col-lg-12">
-			  <div class="card">
+			    <div class="card">
 				<!-- Card header START -->
+                <div class="card-header pb-0 border-0">
+                    <h5 class="card-title mb-0">게시물 검색</h5>
+                </div>
+                <!-- Card header END -->
+
+                <!-- Card body START -->
+                <div class="card-body">
+                    <!-- 검색창 START -->
+                    <div class="mb-3">
+                        <form class="rounded position-relative" id="search-form">
+                            <input class="form-control ps-5 bg-light" type="search" id="search-input" placeholder="태그를 입력하세요." aria-label="Search">
+                            <button class="btn bg-transparent px-2 py-0 position-absolute top-50 start-0 translate-middle-y" id="search-button"  type="submit">
+                                <i class="bi bi-search fs-5"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                <!-- Card body END -->
+            </div>
+        </div>
+        <!-- 검색창 카드 END -->
+
+        <!-- 추천 친구 카드 START -->
+        <div class="col-sm-6 col-lg-12">
+            <div class="card">
 				<div class="card-header pb-0 border-0">
-				  <h5 class="card-title mb-0">추천 친구</h5>
+				    <h5 class="card-title mb-0">추천 친구</h5>
 				</div>
 				<!-- Card header END -->
 				<!-- Card body START -->
 				<div class="card-body">
-				  <!-- Friend recommendations will be dynamically added here -->
-				  <div id="friend-recommendations"></div>
-  
-				  <!-- View more button -->
-				  <div class="d-grid mt-3">
+			  	  <!-- Friend recommendations will be dynamically added here -->
+				    <div id="friend-recommendations"></div>
+
+				    <!-- View more button -->
+				    <div class="d-grid mt-3">
 					<a class="btn btn-sm btn-primary-soft" href="#!" id="load-more-friends">더 보기</a>
-				  </div>
+				    </div>
 				</div>
 				<!-- Card body END -->
-			  </div>
+			    </div>
 			</div>
 			<!-- Card follow END -->					
-		  </div>
+		    </div>
 		</div>
 		<!-- Right sidebar END -->
-	  </div> <!-- Row END -->
+	    </div> <!-- Row END -->
 	</div>
 	<!-- Container END -->
-  </main>
+</main>
   <!-- **************** MAIN CONTENT END **************** -->
 
 <!-- =======================
