@@ -1,5 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const postList = document.getElementById('post-list');
+    const searchInput = document.getElementById('search-input');
+    const searchButton = document.getElementById('search-button');
     const friendRecommendations = document.getElementById('friend-recommendations');
     const loadMoreFriendsBtn = document.getElementById('load-more-friends');
     let currentPage = 1;
@@ -78,11 +80,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 <!-- 태그 표시 부분 -->
                 ${post.tags && post.tags.length > 0 ? `
                     <ul class="nav nav-stack py-3 small ms-4">
-                        ${post.tags.replace(/\[|\]|\"/g, '').split(',').map(tag => `
-                            <li class="nav-item d-flex justify-content-between">
-                                <span class="badge bg-primary me-1">${tag.trim()}</span>
-                            </li>
-                        `).join('')}
+                        ${JSON.parse(post.tags)
+                            .map(tag => `
+                                <li class="nav-item d-flex justify-content-between">
+                                    <span class="badge bg-primary me-1">${tag.trim()}</span>
+                                </li>
+                            `).join('')}
                     </ul>
                 ` : ''}
                 <ul class="nav nav-stack py-3 small ms-4">
@@ -127,6 +130,44 @@ document.addEventListener('DOMContentLoaded', function() {
             postList.appendChild(postElement);
         });
     }
+
+    // 게시물 목록 불러오기 (검색용)
+    async function fetchPostsByTags(tags) {
+        try {
+            const tagParams = tags.map(tag => `tags=${encodeURIComponent(tag)}`).join('&');
+            const response = await fetch(`http://127.0.0.1:8000/insta/posts/search/?${tagParams}`, {
+                method: 'GET',
+                credentials: 'include',
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                return data;
+            } else {
+                console.error('태그로 게시물 조회 실패:', response.status);
+                return null;
+            }
+        } catch (error) {
+            console.error('태그로 게시물 조회 중 에러 발생:', error);
+            return null;
+        }
+    }
+
+    // 검색 버튼 이벤트 핸들러
+    searchButton.addEventListener('click', async () => {
+        const tags = searchInput.value.split(',').map(tag => tag.trim()).filter(tag => tag);
+        if (tags.length > 0) {
+            const posts = await fetchPostsByTags(tags);
+            if (posts && posts.results) {
+                displayPosts(posts.results);
+            } else {
+                postList.innerHTML = '<p>검색 결과가 없습니다.</p>';
+            }
+        } else {
+            alert('적어도 하나의 태그를 입력해주세요.');
+        }
+    });
+
 
     // 친구 추천 불러오기
     async function fetchFriendRecommendations() {
@@ -284,11 +325,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 초기 로드
     async function init() {
-        const initialPosts = await fetchPosts();
+        const initialPosts = await fetchPosts(); // 모든 게시물 가져오기
         if (initialPosts && initialPosts.results) {
             displayPosts(initialPosts.results);
         }
-
+    
+        // 친구 추천 목록 불러오기
         allRecommendations = await fetchFriendRecommendations();
         if (allRecommendations && allRecommendations.length > 0) {
             displayFriendRecommendations(allRecommendations.slice(0, recommendationsPerPage));
