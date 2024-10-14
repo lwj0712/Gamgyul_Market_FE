@@ -142,7 +142,6 @@ function updateNotificationCount() {
 }
 
 function renderNotifications() {
-    console.log('Notifications data:', notifications); // 데이터 로깅
 
     if (!Array.isArray(notifications)) {
         console.error('notifications is not an array:', notifications);
@@ -182,7 +181,6 @@ async function fetchNotifications() {
         const response = await fetchWithCSRF(`${API_BASE_URL}/alarm/`);
         if (response.ok) {
             const data = await response.json();
-            console.log('Server response:', data); // 서버 응답 로깅
             
             // 서버 응답 구조에 따라 적절히 처리
             notifications = Array.isArray(data) ? data : (data.results || []);
