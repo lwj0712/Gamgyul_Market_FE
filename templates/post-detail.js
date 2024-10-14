@@ -4,7 +4,6 @@
     document.addEventListener('DOMContentLoaded', function() {
         const urlParams = new URLSearchParams(window.location.search);
         const postId = urlParams.get('postId');
-        console.log('게시물 ID:', postId);
 
         // CSRF 토큰 가져오기
         function getCSRFToken() {
@@ -34,7 +33,7 @@
         // 게시물 상세 정보 표시
         function displayPostDetail(post) {
             document.getElementById('username').textContent = post.user.username;
-            document.getElementById('user-profile-image').src = `${API_BASE_URL}${post.user.profile_image || '/path/to/default/image.jpg'}`;
+            document.getElementById('user-profile-image').src = `${post.user.profile_image || DEFAULT_PROFILE_IMAGE}`;
             document.getElementById('post-content').textContent = post.content;
             document.getElementById('post-date').textContent = new Date(post.created_at).toLocaleString();
             document.getElementById('likes-count').textContent = post.likes_count || 0;
@@ -72,7 +71,7 @@
             }
 
             // 댓글 및 대댓글 표시
-            displayComments(post.comments);
+            displayComments(post.comments || []);
             displayLikes(post.likes);
         }
 
@@ -80,54 +79,96 @@
         function displayComments(comments) {
             const commentsList = document.getElementById('comments-list');
             commentsList.innerHTML = ''; // 초기화
-            comments.forEach(comment => {
-                const li = document.createElement('li');
-                li.className = 'mb-2';
-                li.innerHTML = `
-                    <strong>${comment.user.username}</strong>: ${comment.content}
-                    <small class="text-muted">${new Date(comment.created_at).toLocaleString()}</small>
-                    <button class="reply-button btn btn-link" data-comment-id="${comment.id}">대댓글</button>
-                    <div class="replies" id="replies-${comment.id}"></div>
-                `;
-                commentsList.appendChild(li);
-                displayReplies(comment.replies, comment.id); // 대댓글 표시
+            
+            // 최상위 댓글만 필터링
+            const topLevelComments = comments.filter(comment => !comment.parent_comment);
+            
+            topLevelComments.forEach(comment => {
+                const commentElement = createCommentElement(comment);
+                commentsList.appendChild(commentElement);
+                
+                // 대댓글 표시
+                const replies = comments.filter(reply => reply.parent_comment === comment.id);
+                if (replies.length > 0) {
+                    const repliesContainer = commentElement.querySelector('.replies');
+                    replies.forEach(reply => {
+                        const replyElement = createReplyElement(reply);
+                        repliesContainer.appendChild(replyElement);
+                    });
+                }
             });
+            
             const commentsCount = document.createElement('small');
             commentsCount.textContent = `총 ${comments.length}개의 댓글`;
             commentsList.prepend(commentsCount);
         }
 
-        // 대댓글 표시
+        // 댓글 요소 생성 함수
+        function createCommentElement(comment) {
+            const li = document.createElement('li');
+            li.className = 'comment-item mb-3';
+            li.innerHTML = `
+                <div class="d-flex">
+                    <div class="profile-image-container">
+                        <img src="${comment.user.profile_image || DEFAULT_PROFILE_IMAGE}" alt="${comment.user.username}" class="profile-image">
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="comment-content">
+                                <strong>${comment.user.username}</strong>
+                                <p class="mb-1">${comment.content}</p>
+                                <small class="text-muted">${new Date(comment.created_at).toLocaleString()}</small>
+                            </div>
+                            <button class="reply-button btn btn-sm btn-light ms-2" data-comment-id="${comment.id}">답글</button>
+                        </div>
+                        <div class="replies mt-2" id="replies-${comment.id}"></div>
+                    </div>
+                </div>
+            `;
+            return li;
+        }
+
+    // 대댓글 요소 생성 함수
+    function createReplyElement(reply) {
+        const replyItem = document.createElement('div');
+        replyItem.className = 'reply-item mt-2';
+        replyItem.innerHTML = `
+            <div class="d-flex">
+                <div class="profile-image-container">
+                    <img src="${reply.user.profile_image || DEFAULT_PROFILE_IMAGE}" alt="${reply.user.username}" class="profile-image">
+                </div>
+                <div class="reply-content flex-grow-1">
+                    <strong>${reply.user.username}</strong>
+                    <p class="mb-1">${reply.content}</p>
+                    <small class="text-muted">${new Date(reply.created_at).toLocaleString()}</small>
+                </div>
+            </div>
+        `;
+        return replyItem;
+    }
+    
+        // 대댓글 표시 함수 개선
         function displayReplies(replies, commentId) {
             const repliesContainer = document.getElementById(`replies-${commentId}`);
             repliesContainer.innerHTML = ''; // 초기화
-
+    
             replies.forEach(reply => {
-                if (reply.user && reply.user.username) {  // user와 username 체크
-                    const replyItem = document.createElement('div');
-                    replyItem.innerHTML = `
+                const replyItem = document.createElement('div');
+                replyItem.className = 'reply-item ms-4 mt-2 border-start border-2 ps-3';
+                replyItem.innerHTML = `
+                    <div class="reply-content">
                         <strong>${reply.user.username}</strong>: ${reply.content}
-                        <small class="text-muted">${new Date(reply.created_at).toLocaleString()}</small>
-                    `;
-                    repliesContainer.appendChild(replyItem);
-                } else {
-                    console.error("대댓글 데이터에 문제가 있습니다:", reply);
-                }
+                        <small class="text-muted d-block">${new Date(reply.created_at).toLocaleString()}</small>
+                    </div>
+                `;
+                repliesContainer.appendChild(replyItem);
             });
         }
 
         // 좋아요 누른 사람 목록 표시
         function displayLikes(likes) {
             const likesList = document.getElementById('likes-list');
-            likesList.innerHTML = ''; // 초기화
-            likes.forEach(like => {
-                const li = document.createElement('li');
-                li.textContent = like.username;
-                likesList.appendChild(li);
-            });
-            if (likes.length === 0) {
-                likesList.innerHTML = '<li>좋아요를 누른 사람이 없습니다.</li>';
-            }
+            likesList.innerHTML = '';
         }
 
         // 좋아요 기능
@@ -155,30 +196,71 @@
         // 댓글 작성
         async function handleCommentSubmit(event) {
             event.preventDefault();
+            
             const commentInput = document.getElementById('comment-input');
+            const urlParams = new URLSearchParams(window.location.search);
+            const postId = urlParams.get('postId');
+        
+            if (!commentInput) {
+                console.error('댓글 입력 요소를 찾을 수 없습니다.');
+                alert('죄송합니다. 댓글을 제출할 수 없습니다. 페이지를 새로고침한 후 다시 시도해 주세요.');
+                return;
+            }
+        
             const content = commentInput.value.trim();
-            if (!content) return;
-
+            
+            if (!content) {
+                alert('댓글 내용을 입력해주세요.');
+                return;
+            }
+            
             try {
                 const response = await fetch(`${API_BASE_URL}/insta/posts/${postId}/comments/`, {
                     method: 'POST',
-                    credentials: 'include',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': getCSRFToken()
+                        'X-CSRFToken': getCSRFToken(),
                     },
-                    body: JSON.stringify({ content })
+                    credentials: 'include',
+                    body: JSON.stringify({ content }),
                 });
+                
                 if (!response.ok) {
-                    throw new Error('댓글 작성 실패: ' + response.status);
+                    const errorBody = await response.text();
+                    console.error('서버 오류 응답:', errorBody);
+                    throw new Error(`HTTP error! status: ${response.status}, body: ${errorBody}`);
                 }
-
+                
                 const newComment = await response.json();
-                displayComments([...document.getElementById('comments-list').children, newComment]);
-                commentInput.value = '';
+                
+                if (newComment.id) {
+                    addCommentToList(newComment);
+                    alert('댓글이 성공적으로 등록되었습니다!');
+                    commentInput.value = '';
+                } else {
+                    throw new Error('서버 응답에 댓글 ID가 없습니다.');
+                }
             } catch (error) {
-                console.error('댓글 작성 중 오류 발생:', error);
+                console.error('댓글 제출 중 오류 발생:', error);
+                alert('댓글 제출에 실패했습니다: ' + error.message);
             }
+        }
+        
+        function addCommentToList(comment) {
+            const commentsList = document.getElementById('comments-list');
+            const li = document.createElement('li');
+            li.className = 'mb-2';
+            
+            li.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <img src="${comment.user.profile_image || DEFAULT_PROFILE_IMAGE}" alt="${comment.user.username}" class="rounded-circle me-2" width="32" height="32">
+                    <strong>${comment.user.username}</strong>
+                </div>
+                <p class="mb-1">${comment.content}</p>
+                <small class="text-muted">${new Date(comment.created_at).toLocaleString()}</small>
+            `;
+            
+            commentsList.appendChild(li);
         }
 
         // 대댓글 작성
@@ -188,7 +270,7 @@
             const content = replyInput.value.trim();
             const commentId = event.target.dataset.commentId;
             if (!content) return;
-
+    
             try {
                 const response = await fetch(`${API_BASE_URL}/insta/posts/${postId}/comments/`, {
                     method: 'POST',
@@ -197,15 +279,23 @@
                         'Content-Type': 'application/json',
                         'X-CSRFToken': getCSRFToken()
                     },
-                    body: JSON.stringify({ content })
+                    body: JSON.stringify({ content, parent_comment: commentId })
                 });
                 if (!response.ok) {
                     throw new Error('대댓글 작성 실패: ' + response.status);
                 }
-
+    
                 const newReply = await response.json();
-                displayReplies([...document.getElementById(`replies-${commentId}`).children, newReply], commentId);
+                
+                // 대댓글 목록 업데이트
+                const repliesContainer = document.getElementById(`replies-${commentId}`);
+                const replyElement = createReplyElement(newReply);
+                repliesContainer.appendChild(replyElement);
+    
                 replyInput.value = '';
+                
+                // 대댓글 폼 제거
+                event.target.remove();
             } catch (error) {
                 console.error('대댓글 작성 중 오류 발생:', error);
             }
@@ -221,8 +311,8 @@
                 const commentId = event.target.dataset.commentId;
                 const replyInputHTML = `
                     <form class="reply-form" data-comment-id="${commentId}">
-                        <input type="text" class="reply-input" placeholder="대댓글 입력" required>
-                        <button type="submit" class="btn btn-primary">댓글달기</button>
+                        <input type="text" class="reply-input" placeholder="입력하세요" required>
+                        <button type="submit" class="btn btn-primary">답글달기</button>
                     </form>
                 `;
                 const repliesContainer = document.getElementById(`replies-${commentId}`);
