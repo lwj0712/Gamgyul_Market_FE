@@ -1,8 +1,8 @@
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('signup-form');
     const errorMessage = document.getElementById('error-message');
-    const password = document.getElementById('password');
-    const confirmPassword = document.getElementById('confirm_password');
+    const password = document.getElementById('password1');
+    const confirmPassword = document.getElementById('password2');
 
     function validatePassword() {
         if (password.value != confirmPassword.value) {
@@ -25,28 +25,122 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         const formData = new FormData(form);
-        formData.delete('confirm_password'); // 서버로 전송하지 않음
+
+        const jsonData = {
+            username: formData.get('username'),
+            email: formData.get('email'),
+            password1: formData.get('password1'),
+            password2: formData.get('password2'),
+            bio: formData.get('bio') || ''
+        };
+
+        const profileImage = formData.get('profile_image');
+        if (profileImage && profileImage.size > 0) {
+            const imageFormData = new FormData();
+            // 먼저 회원가입을 진행하고, 이미지는 별도로 업로드하는 로직이 필요할 수 있습니다
+            imageFormData.append('profile_image', profileImage);
+        }
 
         try {
-            const response = await fetch('http://127.0.0.1:8000/accounts/signup/', {
+            // 회원가입 요청
+            const registerResponse = await fetch('http://127.0.0.1:8000/accounts/registration/', {
                 method: 'POST',
-                body: formData,
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Origin': 'http://127.0.0.1:5500'
+                },
+                body: JSON.stringify(jsonData),
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(Object.values(errorData).flat().join(' '));
+            if (!registerResponse.ok) {
+                const errorData = await registerResponse.json();
+                const errorMessages = Object.entries(errorData)
+                    .map(([key, value]) => Array.isArray(value) ? value.join(' ') : value)
+                    .join(' ');
+                throw new Error(errorMessages);
             }
 
-            const data = await response.json();
-            console.log('회원가입 성공:', data);
-            alert('회원가입에 성공했습니다! 로그인 페이지로 이동합니다.');
+            // 회원가입 성공 후 자동 로그인 요청
+            const loginData = {
+                email: formData.get('email'),
+                password: formData.get('password1')  // password1을 사용하도록 수정
+            };        
+
+            const loginResponse = await fetch('http://127.0.0.1:8000/api/token/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(loginData),
+            });
+
+            if (!loginResponse.ok) {
+                throw new Error('로그인 중 오류가 발생했습니다.');
+            }
+
+            const tokens = await loginResponse.json();
             
-            // 로그인 페이지로 리다이렉트
-            window.location.href = '/templates/login.html';
+            // JWT 토큰을 로컬 스토리지에 저장
+            localStorage.setItem('access_token', tokens.access);
+            localStorage.setItem('refresh_token', tokens.refresh);
+
+            alert('회원가입에 성공했습니다!');
+            
+            // 메인 페이지로 리다이렉트
+            window.location.href = '/index.html';
         } catch (error) {
             console.error('회원가입 오류:', error);
             errorMessage.textContent = error.message || '회원가입 중 오류가 발생했습니다.';
         }
     });
 });
+
+// JWT 토큰 관리를 위한 유틸리티 함수들
+const authUtils = {
+    // 토큰 갱신
+    async refreshToken() {
+        const refresh_token = localStorage.getItem('refresh_token');
+        
+        try {
+            const response = await fetch('http://127.0.0.1:8000/api/token/refresh/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    refresh: refresh_token
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('토큰 갱신 실패');
+            }
+
+            const tokens = await response.json();
+            localStorage.setItem('access_token', tokens.access);
+            return tokens.access;
+        } catch (error) {
+            // 토큰 갱신 실패시 로그아웃 처리
+            this.logout();
+            throw error;
+        }
+    },
+
+    // 인증이 필요한 API 요청을 위한 헤더 생성
+    getAuthHeaders() {
+        const token = localStorage.getItem('access_token');
+        return {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+        };
+    },
+
+    // 로그아웃
+    logout() {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        window.location.href = '/login.html';
+    }
+};
