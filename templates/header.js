@@ -105,11 +105,11 @@ function updateProfileDropdown(profileData) {
     if (dropdownEmail) dropdownEmail.textContent = profileData.email;
 
     if (viewProfileLink) {
-        viewProfileLink.href = `/templates/profile.html?uuid=${profileData.uuid}`;
+        viewProfileLink.href = `/templates/profile.html?uuid=${profileData.id}`;
     }
 
     if (profileSettingsLink) {
-        profileSettingsLink.href = `/templates/profile-settings.html?uuid=${profileData.uuid}`;
+        profileSettingsLink.href = `/templates/profile-settings.html?uuid=${profileData.id}`;
     }
 }
 
@@ -120,25 +120,26 @@ async function loadLoggedInUserProfile() {
     }
 
     try {
-        const currentUser = getCurrentUser();
-        if (!currentUser || !currentUser.uuid) {
-            throw new Error('로그인한 사용자 정보를 찾을 수 없습니다.');
-        }
-
-        const response = await fetchWithAuth(`${API_BASE_URL}/accounts/profile/${currentUser.uuid}/`);
-        if (!response) return; // fetchWithAuth에서 null을 반환한 경우
+        // 먼저 current-user 정보를 가져옵니다
+        const response = await fetchWithAuth(`${API_BASE_URL}/accounts/current-user/`);
+        if (!response) return;
 
         if (response.ok) {
-            const profileData = await response.json();
-            updateProfileDropdown(profileData);
+            const userData = await response.json();
+            // 가져온 최신 사용자 정보로 localStorage 업데이트
+            localStorage.setItem('user', JSON.stringify({
+                uuid: userData.uuid,
+                email: userData.email,
+                username: userData.username
+            }));
+            
+            updateProfileDropdown(userData);
         } else {
             throw new Error('로그인한 사용자 프로필 로드 실패');
         }
     } catch (error) {
         console.error('로그인한 사용자 프로필 로드 중 오류 발생:', error);
-        if (error.message !== '로그인한 사용자 정보를 찾을 수 없습니다.') {
-            showErrorMessage('로그인한 사용자 프로필을 불러오는 데 실패했습니다.');
-        }
+        showErrorMessage('로그인한 사용자 프로필을 불러오는 데 실패했습니다.');
     }
 }
 
@@ -206,8 +207,8 @@ function renderNotifications() {
 
 async function fetchNotifications() {
     try {
-        const response = await fetchWithAuth(`${API_BASE_URL}/alarm/`);
-        if (response.ok) {
+        const response = await fetchWithAuth(`${API_BASE_URL}/notifications/`);
+        if (response && response.ok) {
             const data = await response.json();
             notifications = Array.isArray(data) ? data : (data.results || []);
             renderNotifications();
@@ -220,8 +221,11 @@ async function fetchNotifications() {
 
 async function deleteNotification(notificationId) {
     try {
-        const response = await fetchWithAuth(`${API_BASE_URL}/alarm/${notificationId}/delete/`, 'DELETE');
-        if (response.ok) {
+        const response = await fetchWithAuth(
+            `${API_BASE_URL}/notifications/${notificationId}/delete/`, 
+            'DELETE'
+        );
+        if (response && response.ok) {
             notifications = notifications.filter(n => n.id !== notificationId);
             renderNotifications();
         }
@@ -233,60 +237,115 @@ async function deleteNotification(notificationId) {
 
 async function clearAllNotifications() {
     try {
-        const response = await fetchWithAuth(`${API_BASE_URL}/alarm/delete-all/`, 'DELETE');
-        if (response.ok) {
+        const response = await fetchWithAuth(
+            `${API_BASE_URL}/notifications/delete_all/`, 
+            'DELETE'
+        );
+        if (response && response.ok) {
             notifications = [];
             renderNotifications();
         }
     } catch (error) {
-        console.error('Error clearing all notifications:', error);
+        console.error('Error clearing notifications:', error);
         showErrorMessage('모든 알림 삭제 중 오류가 발생했습니다.');
     }
-}
-
-// WebSocket 설정
-function setupWebSocket() {
-    const currentUser = getCurrentUser();
-    if (!currentUser || !currentUser.uuid) {
-        console.error('Current user UUID is not available');
-        return;
-    }
-
-    const socket = new WebSocket(`ws://${API_BASE_URL.replace('http://', '')}/ws/alarm/${currentUser.uuid}/`);
-
-    socket.onmessage = function(e) {
-        const data = JSON.parse(e.data);
-        if (data.alarm) {
-            notifications.unshift(data.alarm);
-            renderNotifications();
-        }
-    };
-
-    socket.onclose = function(e) {
-        console.error('Alarm socket closed unexpectedly');
-        setTimeout(() => setupWebSocket(), 5000);
-    };
-
-    socket.onerror = function(e) {
-        console.error('WebSocket error occurred', e);
-    };
 }
 
 // 초기화 함수
 async function init() {
     try {
-        const userData = await fetchCurrentUserInfo();
-        if (userData) {
-            updateProfileDropdown(userData);
-            setupWebSocket();
-            await fetchNotifications();
-        } else {
-            throw new Error('Failed to initialize user data');
+        if (!isLoggedIn()) return;
+
+        // current-user 정보를 가져오고 저장
+        const response = await fetchWithAuth(`${API_BASE_URL}/accounts/current-user/`);
+        if (!response || !response.ok) {
+            throw new Error('사용자 정보를 가져오는데 실패했습니다.');
         }
+
+        const userData = await response.json();
+        console.log('Current user data:', userData); // 데이터 확인용 로그
+
+        // 사용자 정보 업데이트
+        localStorage.setItem('user', JSON.stringify({
+            uuid: userData.id,
+            email: userData.email,
+            username: userData.username,
+            profile_image: userData.profile_image
+        }));
+
+        // UI 업데이트
+        updateProfileDropdown(userData);
+
+        // WebSocket 연결 설정 (사용자 정보가 저장된 후에 실행)
+        if (userData.id) {
+            setupWebSocket(userData.id);
+        } else {
+            console.error('User UUID not found in response:', userData);
+        }
+
+        // 알림 가져오기
+        await fetchNotifications();
     } catch (error) {
         console.error('Error initializing application:', error);
         showErrorMessage('애플리케이션을 초기화하는 데 실패했습니다.');
     }
+}
+
+// WebSocket 설정 함수
+function setupWebSocket(userId) {
+    if (!userId) {
+        const currentUser = getCurrentUser();
+        userId = currentUser?.uuid;
+    }
+    
+    if (!userId) {
+        console.error('User ID not available for WebSocket connection');
+        return;
+    }
+
+    console.log('Setting up WebSocket with ID:', userId);
+
+    // URL 패턴을 notifications로 수정
+    const socket = new WebSocket(`ws://${API_BASE_URL.replace('http://', '')}/ws/notifications/${userId}/`);
+
+    socket.onopen = function(e) {
+        console.log('WebSocket connection established successfully');
+    };
+
+    socket.onmessage = function(e) {
+        try {
+            const data = JSON.parse(e.data);
+            console.log('Received WebSocket message:', data);
+            if (data.alarm) {
+                notifications.unshift(data.alarm);
+                renderNotifications();
+            }
+        } catch (error) {
+            console.error('Error processing WebSocket message:', error);
+        }
+    };
+
+    socket.onclose = function(e) {
+        if (e.wasClean) {
+            console.log(`WebSocket closed cleanly, code=${e.code}, reason=${e.reason}`);
+        } else {
+            console.log('WebSocket connection died');
+        }
+        setTimeout(() => setupWebSocket(userId), 5000);
+    };
+
+    socket.onerror = function(e) {
+        console.error('WebSocket error occurred:', e);
+    };
+
+    // 연결 해제 처리를 위한 이벤트 리스너 추가
+    window.addEventListener('beforeunload', () => {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.close();
+        }
+    });
+
+    return socket;
 }
 
 // Event Listeners and Initialization
@@ -316,10 +375,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Bootstrap Dropdowns 초기화
     initializeDropdowns();
 
+    // 초기화 함수 실행
     if (isLoggedIn()) {
-        loadLoggedInUserProfile();
-        init();
-        setInterval(fetchNotifications, 60000);
+        init().catch(error => {
+            console.error('Initialization failed:', error);
+            showErrorMessage('초기화 중 오류가 발생했습니다.');
+        });
     }
 });
 
