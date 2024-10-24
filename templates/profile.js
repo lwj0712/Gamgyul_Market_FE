@@ -4,6 +4,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const DEFAULT_PROFILE_IMAGE = '/templates/images/team_profile.png';
     const USERS_TO_SHOW = 5;
 
+    // JWT 관련 유틸리티 함수
+    function getJWTToken() {
+        return localStorage.getItem('jwt_token');
+    }
+
+    function setJWTToken(token) {
+        localStorage.setItem('jwt_token', token);
+    }
+
+    function removeJWTToken() {
+        localStorage.removeItem('jwt_token');
+    }
+
     // DOM Elements
     const profileImage = document.getElementById('profile-image');
     const usernameElement = document.getElementById('username');
@@ -33,58 +46,57 @@ document.addEventListener('DOMContentLoaded', function() {
     const notificationList = document.getElementById('notification-list');
     const clearAllNotificationsBtn = document.getElementById('clear-all-notifications');
 
-    // State
-    const urlParams = new URLSearchParams(window.location.search);
-    const username = urlParams.get('username');
     let allFollowers = [];
     let allFollowing = [];
-    let currentUserId;
     let notifications = [];
 
-    // Utility Functions
-    function getCurrentUsername() {
-        return localStorage.getItem('username') || '';
-    }
-
-    function getCSRFToken() {
-        const csrfCookie = document.cookie.split('; ')
-            .find(row => row.startsWith('csrftoken='));
-        return csrfCookie ? csrfCookie.split('=')[1] : null;
-    }
-
-    async function fetchWithCSRF(url, method = 'GET', body = null) { 
-        const csrfToken = getCSRFToken();
-        if (!csrfToken) {
-            throw new Error('CSRF token not found');
+    // API 요청 함수 수정
+    async function fetchWithAuth(url, method = 'GET', body = null) {
+        const token = getJWTToken();
+        if (!token && !url.includes('/login/')) {
+            window.location.href = '/templates/login.html';
+            return;
         }
-        
+
         const options = {
             method: method,
-            credentials: 'include',
             headers: {
-                'X-CSRFToken': csrfToken,
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
             }
         };
-    
+
         if (body && method !== 'GET') {
             options.body = JSON.stringify(body);
-            options.headers['Content-Type'] = 'application/json';
         }
-    
-        return fetch(url, options);
+
+        const response = await fetch(url, options);
+
+        if (response.status === 401) {
+            removeJWTToken();
+            window.location.href = '/templates/login.html';
+            return;
+        }
+
+        return response;
     }
 
     function showErrorMessage(message) {
         alert(message);
     }
 
-    // Profile Functions
     async function loadProfile() {
         try {
-            const response = await fetchWithCSRF(`${API_BASE_URL}/accounts/profile/${username}/`);
+            const currentUser = getCurrentUser();
+            
+            if (!currentUser || !currentUser.uuid) {
+                showLoginLink();
+                return;
+            }
+    
+            const response = await fetchWithAuth(`${API_BASE_URL}/accounts/profile/${currentUser.uuid}/`);
             if (response.ok) {
                 const profileData = await response.json();
-                userId = profileData.id; 
                 updateProfileUI(profileData);
             } else if (response.status === 401) {
                 showLoginLink();
@@ -96,13 +108,19 @@ document.addEventListener('DOMContentLoaded', function() {
             showErrorMessage('프로필을 불러오는 데 실패했습니다. 다시 시도해 주세요.');
         }
     }
-
-    function getFullImageUrl(imageUrl) {
-        if (!imageUrl) return DEFAULT_PROFILE_IMAGE;
-        if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-            return imageUrl;
+    
+    // 현재 사용자 정보를 가져오는 함수
+    function getCurrentUser() {
+        // localStorage에서 사용자 정보 가져오기
+        const userStr = localStorage.getItem('user');
+        if (!userStr) return null;
+        
+        try {
+            return JSON.parse(userStr);
+        } catch (error) {
+            console.error('사용자 정보 파싱 오류:', error);
+            return null;
         }
-        return `${API_BASE_URL}${imageUrl}`;
     }
 
     function updateProfileUI(profileData) {
@@ -217,8 +235,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function createUserListItem(user, type) {
-        const currentUser = localStorage.getItem('username');
-        const isCurrentUser = user.username === currentUser;
+        const currentUser = getCurrentUser();
+        const isCurrentUser = user.uuid === currentUser.uuid;
         
         return `
             <li class="list-group-item d-flex align-items-center justify-content-between">
@@ -230,7 +248,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
                 <div>
                     ${!isCurrentUser ? `
-                        <button class="btn btn-sm ${type === 'following' ? 'btn-danger-soft unfollow-btn' : 'btn-success-soft follow-btn'}" data-user-id="${user.id}">
+                        <button class="btn btn-sm ${type === 'following' ? 'btn-danger-soft unfollow-btn' : 'btn-success-soft follow-btn'}" data-user-uuid="${user.uuid}">
                             ${type === 'following' ? '언팔로우' : '팔로우'}
                         </button>
                     ` : ''}
@@ -316,14 +334,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     async function handleFollowUnfollow(event) {
-        const userId = event.target.getAttribute('data-user-id');
+        const targetUuid = event.target.getAttribute('data-user-uuid');
         const isFollowing = event.target.classList.contains('unfollow-btn');
         const url = isFollowing 
-            ? `${API_BASE_URL}/accounts/unfollow/${userId}/`
-            : `${API_BASE_URL}/accounts/follow/${userId}/`;
-        
+            ? `${API_BASE_URL}/accounts/unfollow/${targetUuid}/`
+            : `${API_BASE_URL}/accounts/follow/${targetUuid}/`;
+
         try {
-            const response = await fetchWithCSRF(url, isFollowing ? 'DELETE' : 'POST');
+            const response = await fetchWithAuth(url, isFollowing ? 'DELETE' : 'POST');
             if (response.ok) {
                 const data = await response.json();
                 updateFollowButton(event.target, !isFollowing);
@@ -355,20 +373,38 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    async function handleLogout(e) {
-        e.preventDefault();
+    // 로그인 처리 함수
+    async function handleLogin(email, password) {
         try {
-            const response = await fetchWithCSRF(`${API_BASE_URL}/accounts/logout/`, 'POST');
+            const response = await fetch(`${API_BASE_URL}/accounts/login/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password })
+            });
+
             if (response.ok) {
-                localStorage.removeItem('username');
-                window.location.href = '/templates/login.html';
+                const data = await response.json();
+                setJWTToken(data.token);
+                localStorage.setItem('user_uuid', data.uuid);
+                window.location.href = '/templates/profile.html?uuid=' + data.uuid;
             } else {
-                throw new Error('로그아웃 실패');
+                throw new Error('로그인 실패');
             }
         } catch (error) {
-            console.error('로그아웃 중 오류 발생:', error);
-            showErrorMessage('로그아웃 처리 중 오류가 발생했습니다. 다시 시도해 주세요.');
+            console.error('로그인 중 오류 발생:', error);
+            showErrorMessage('로그인 처리 중 오류가 발생했습니다.');
         }
+    }
+
+
+    // 로그아웃 처리 함수
+    async function handleLogout(e) {
+        e.preventDefault();
+        removeJWTToken();
+        localStorage.removeItem('user_uuid');
+        window.location.href = '/templates/login.html';
     }
 
     // Search Functions
@@ -403,7 +439,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <span>${user.username}</span>
             `;
             resultItem.addEventListener('click', () => {
-                window.location.href = `/templates/profile.html?username=${user.username}`;
+                window.location.href = `/templates/profile.html?uuid=${user.uuid}`;
             });
             searchResults.appendChild(resultItem);
         });
@@ -426,7 +462,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialization
     async function loadLoggedInUserProfile() {
         try {
-            const loggedInUsername = getCurrentUsername();
+            const loggedInUsername = getCurrentUserId();
             if (!loggedInUsername) {
                 throw new Error('로그인한 사용자 정보를 찾을 수 없습니다.');
             }
@@ -463,18 +499,19 @@ document.addEventListener('DOMContentLoaded', function() {
         window.location.href = '/templates/edit-profile.html';
     });
 
+    // 프로필 설정 변경
     if (profileSettingsBtn) {
         profileSettingsBtn.addEventListener('click', () => {
-            const currentUsername = getCurrentUsername();
-            window.location.href = `/templates/profile-settings.html?username=${currentUsername}`;
+            const currentUserUuid = getCurrentUser().uuid;
+            window.location.href = `/templates/profile-settings.html?uuid=${currentUserUuid}`;
         });
     }
 
     if (profileSettingsLink) {
         profileSettingsLink.addEventListener('click', (e) => {
             e.preventDefault();
-            const currentUsername = getCurrentUsername();
-            window.location.href = `/templates/profile-settings.html?username=${currentUsername}`;
+            const currentUserUuid = getCurrentUser().uuid;
+            window.location.href = `/templates/profile-settings.html?uuid=${currentUserUuid}`;
         });
     }
 
@@ -610,17 +647,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // WebSocket 연결 수정
     function setupWebSocket() {
-        if (!currentUserId) {
-            console.error('Current user ID is not available');
+        const userUuid = localStorage.getItem('user_uuid');
+        if (!userUuid) {
+            console.error('User UUID is not available');
             return;
         }
 
-        const socket = new WebSocket(`ws://${API_BASE_URL.replace('http://', '')}/ws/alarm/${currentUserId}/`);
-
-        socket.onopen = function(e) {
-            console.log('WebSocket 연결 성공');
-        };
+        const socket = new WebSocket(`ws://${API_BASE_URL.replace('http://', '')}/ws/alarm/${userUuid}/`);
 
         socket.onmessage = function(e) {
             const data = JSON.parse(e.data);
@@ -664,18 +699,19 @@ document.addEventListener('DOMContentLoaded', function() {
         window.location.href = '/templates/edit-profile.html';
     });
 
+    // 프로필 설정 변경
     if (profileSettingsBtn) {
         profileSettingsBtn.addEventListener('click', () => {
-            const currentUsername = getCurrentUsername();
-            window.location.href = `/templates/profile-settings.html?username=${currentUsername}`;
+            const currentUserUuid = getCurrentUser().uuid;
+            window.location.href = `/templates/profile-settings.html?uuid=${currentUserUuid}`;
         });
     }
 
     if (profileSettingsLink) {
         profileSettingsLink.addEventListener('click', (e) => {
             e.preventDefault();
-            const currentUsername = getCurrentUsername();
-            window.location.href = `/templates/profile-settings.html?username=${currentUsername}`;
+            const currentUserUuid = getCurrentUser().uuid;
+            window.location.href = `/templates/profile-settings.html?uuid=${currentUserUuid}`;
         });
     }
 

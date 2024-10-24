@@ -2,37 +2,67 @@
 const API_BASE_URL = 'http://127.0.0.1:8000';
 const DEFAULT_PROFILE_IMAGE = '/templates/images/team_profile.png';
 
-// Utility Functions
-function getCurrentUsername() {
-    return localStorage.getItem('username') || '';
+// JWT 관련 유틸리티 함수
+function getJWTToken() {
+    return localStorage.getItem('jwt_token');
 }
 
-function getCSRFToken() {
-    const csrfCookie = document.cookie.split('; ')
-        .find(row => row.startsWith('csrftoken='));
-    return csrfCookie ? csrfCookie.split('=')[1] : null;
+function setJWTToken(token) {
+    localStorage.setItem('jwt_token', token);
 }
 
-async function fetchWithCSRF(url, method = 'GET', body = null) {
-    const csrfToken = getCSRFToken();
-    if (!csrfToken) {
-        throw new Error('CSRF token not found');
-    }
+function removeJWTToken() {
+    localStorage.removeItem('jwt_token');
+}
+
+// 현재 사용자 정보 관련 함수
+function getCurrentUser() {
+    const userStr = localStorage.getItem('user');
+    const token = getJWTToken();
     
+    if (!userStr || !token) return null;
+    
+    try {
+        return JSON.parse(userStr);
+    } catch (error) {
+        console.error('사용자 정보 파싱 오류:', error);
+        return null;
+    }
+}
+
+function isLoggedIn() {
+    return !!getJWTToken() && !!getCurrentUser();
+}
+
+async function fetchWithAuth(url, method = 'GET', body = null) {
+    const token = getJWTToken();
+    if (!token && !url.includes('/login/')) {
+        window.location.href = '/templates/login.html';
+        return null;
+    }
+
     const options = {
         method: method,
-        credentials: 'include',
         headers: {
-            'X-CSRFToken': csrfToken,
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
         }
     };
 
     if (body && method !== 'GET') {
         options.body = JSON.stringify(body);
-        options.headers['Content-Type'] = 'application/json';
     }
 
-    return fetch(url, options);
+    const response = await fetch(url, options);
+
+    if (response.status === 401) {
+        removeJWTToken();
+        localStorage.removeItem('user');
+        window.location.href = '/templates/login.html';
+        return null;
+    }
+
+    return response;
 }
 
 function getFullImageUrl(imageUrl) {
@@ -48,8 +78,20 @@ function showErrorMessage(message) {
     // TODO: Implement UI error message display
 }
 
+// Bootstrap Dropdowns 초기화
+function initializeDropdowns() {
+    if (typeof bootstrap !== 'undefined' && bootstrap.Dropdown) {
+        const dropdownElementList = [].slice.call(document.querySelectorAll('[data-bs-toggle="dropdown"]'));
+        dropdownElementList.map(function (dropdownToggleEl) {
+            return new bootstrap.Dropdown(dropdownToggleEl);
+        });
+    }
+}
+
 // Header-specific Functions
 function updateProfileDropdown(profileData) {
+    if (!profileData) return;
+
     const navProfileImage = document.getElementById('nav-profile-image');
     const dropdownProfileImage = document.getElementById('dropdown-profile-image');
     const dropdownUsername = document.getElementById('dropdown-username');
@@ -63,21 +105,29 @@ function updateProfileDropdown(profileData) {
     if (dropdownEmail) dropdownEmail.textContent = profileData.email;
 
     if (viewProfileLink) {
-        viewProfileLink.href = `/templates/profile.html?username=${profileData.username}`;
+        viewProfileLink.href = `/templates/profile.html?uuid=${profileData.uuid}`;
     }
 
     if (profileSettingsLink) {
-        profileSettingsLink.href = `/templates/profile-settings.html?username=${profileData.username}`;
+        profileSettingsLink.href = `/templates/profile-settings.html?uuid=${profileData.uuid}`;
     }
 }
 
 async function loadLoggedInUserProfile() {
+    if (!isLoggedIn()) {
+        console.log('사용자가 로그인하지 않았습니다.');
+        return;
+    }
+
     try {
-        const loggedInUsername = getCurrentUsername();
-        if (!loggedInUsername) {
+        const currentUser = getCurrentUser();
+        if (!currentUser || !currentUser.uuid) {
             throw new Error('로그인한 사용자 정보를 찾을 수 없습니다.');
         }
-        const response = await fetchWithCSRF(`${API_BASE_URL}/accounts/profile/${loggedInUsername}/`);
+
+        const response = await fetchWithAuth(`${API_BASE_URL}/accounts/profile/${currentUser.uuid}/`);
+        if (!response) return; // fetchWithAuth에서 null을 반환한 경우
+
         if (response.ok) {
             const profileData = await response.json();
             updateProfileDropdown(profileData);
@@ -86,31 +136,17 @@ async function loadLoggedInUserProfile() {
         }
     } catch (error) {
         console.error('로그인한 사용자 프로필 로드 중 오류 발생:', error);
-        showErrorMessage('로그인한 사용자 프로필을 불러오는 데 실패했습니다.');
+        if (error.message !== '로그인한 사용자 정보를 찾을 수 없습니다.') {
+            showErrorMessage('로그인한 사용자 프로필을 불러오는 데 실패했습니다.');
+        }
     }
 }
 
 async function handleLogout(e) {
     e.preventDefault();
-    try {
-        const response = await fetchWithCSRF(`${API_BASE_URL}/accounts/logout/`, 'POST');
-        if (response.ok) {
-            localStorage.removeItem('username');
-            window.location.href = '/templates/login.html';
-        } else {
-            throw new Error('로그아웃 실패');
-        }
-    } catch (error) {
-        console.error('로그아웃 중 오류 발생:', error);
-        showErrorMessage('로그아웃 처리 중 오류가 발생했습니다. 다시 시도해 주세요.');
-    }
-}
-
-function initializeDropdowns() {
-    var dropdownElementList = [].slice.call(document.querySelectorAll('[data-bs-toggle="dropdown"]'))
-    var dropdownList = dropdownElementList.map(function (dropdownToggleEl) {
-      return new bootstrap.Dropdown(dropdownToggleEl)
-    })
+    removeJWTToken();
+    localStorage.removeItem('user');
+    window.location.href = '/templates/login.html';
 }
 
 // Notification Functions
@@ -119,10 +155,10 @@ let currentUserId;
 
 async function fetchCurrentUserInfo() {
     try {
-        const response = await fetchWithCSRF(`${API_BASE_URL}/accounts/current-user/`);
+        const response = await fetchWithAuth(`${API_BASE_URL}/accounts/current-user/`);
         if (response.ok) {
             const userData = await response.json();
-            currentUserId = userData.id;
+            localStorage.setItem('user', JSON.stringify(userData));
             return userData;
         } else {
             throw new Error('Failed to fetch current user info');
@@ -133,6 +169,7 @@ async function fetchCurrentUserInfo() {
     }
 }
 
+// 알림 관련 함수들
 function updateNotificationCount() {
     const notificationCount = document.getElementById('notification-count');
     const notificationBadge = document.getElementById('notification-badge');
@@ -142,18 +179,8 @@ function updateNotificationCount() {
 }
 
 function renderNotifications() {
-    console.log('Notifications data:', notifications); // 데이터 로깅
-
-    if (!Array.isArray(notifications)) {
-        console.error('notifications is not an array:', notifications);
-        return; // 배열이 아니면 함수 종료
-    }
-
     const notificationList = document.getElementById('notification-list');
-    if (!notificationList) {
-        console.error('Notification list element not found');
-        return;
-    }
+    if (!notificationList || !Array.isArray(notifications)) return;
 
     notificationList.innerHTML = '';
     notifications.forEach((notification) => {
@@ -179,17 +206,11 @@ function renderNotifications() {
 
 async function fetchNotifications() {
     try {
-        const response = await fetchWithCSRF(`${API_BASE_URL}/alarm/`);
+        const response = await fetchWithAuth(`${API_BASE_URL}/alarm/`);
         if (response.ok) {
             const data = await response.json();
-            console.log('Server response:', data); // 서버 응답 로깅
-            
-            // 서버 응답 구조에 따라 적절히 처리
             notifications = Array.isArray(data) ? data : (data.results || []);
-            
             renderNotifications();
-        } else {
-            throw new Error('알림 가져오기 실패');
         }
     } catch (error) {
         console.error('Error fetching notifications:', error);
@@ -197,15 +218,12 @@ async function fetchNotifications() {
     }
 }
 
-
 async function deleteNotification(notificationId) {
     try {
-        const response = await fetchWithCSRF(`${API_BASE_URL}/alarm/${notificationId}/delete/`, 'DELETE');
+        const response = await fetchWithAuth(`${API_BASE_URL}/alarm/${notificationId}/delete/`, 'DELETE');
         if (response.ok) {
             notifications = notifications.filter(n => n.id !== notificationId);
             renderNotifications();
-        } else {
-            throw new Error('알림 삭제 실패');
         }
     } catch (error) {
         console.error('Error deleting notification:', error);
@@ -213,15 +231,12 @@ async function deleteNotification(notificationId) {
     }
 }
 
-
 async function clearAllNotifications() {
     try {
-        const response = await fetchWithCSRF(`${API_BASE_URL}/alarm/delete-all/`, 'DELETE');
+        const response = await fetchWithAuth(`${API_BASE_URL}/alarm/delete-all/`, 'DELETE');
         if (response.ok) {
             notifications = [];
             renderNotifications();
-        } else {
-            throw new Error('모든 알림 삭제 실패');
         }
     } catch (error) {
         console.error('Error clearing all notifications:', error);
@@ -229,18 +244,15 @@ async function clearAllNotifications() {
     }
 }
 
-// WebSocket 설정 함수 수정
+// WebSocket 설정
 function setupWebSocket() {
-    if (!currentUserId) {
-        console.error('Current user ID is not available');
+    const currentUser = getCurrentUser();
+    if (!currentUser || !currentUser.uuid) {
+        console.error('Current user UUID is not available');
         return;
     }
 
-    const socket = new WebSocket(`ws://${API_BASE_URL.replace('http://', '')}/ws/alarm/${currentUserId}/`);
-
-    socket.onopen = function(e) {
-        console.log('WebSocket 연결 성공');
-    };
+    const socket = new WebSocket(`ws://${API_BASE_URL.replace('http://', '')}/ws/alarm/${currentUser.uuid}/`);
 
     socket.onmessage = function(e) {
         const data = JSON.parse(e.data);
@@ -260,6 +272,7 @@ function setupWebSocket() {
     };
 }
 
+// 초기화 함수
 async function init() {
     try {
         const userData = await fetchCurrentUserInfo();
@@ -278,6 +291,14 @@ async function init() {
 
 // Event Listeners and Initialization
 document.addEventListener('DOMContentLoaded', function() {
+    // 로그인 상태 체크
+    if (!isLoggedIn()) {
+        if (!window.location.pathname.includes('/login.html')) {
+            window.location.href = '/templates/login.html';
+            return;
+        }
+    }
+
     const signOutLink = document.getElementById('sign-out-link');
     const clearAllNotificationsBtn = document.getElementById('clear-all-notifications');
 
@@ -292,13 +313,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    loadLoggedInUserProfile();
+    // Bootstrap Dropdowns 초기화
     initializeDropdowns();
-    init();
 
-    // 주기적으로 알림 업데이트 (선택사항)
-    setInterval(fetchNotifications, 60000); // 1분마다 업데이트
+    if (isLoggedIn()) {
+        loadLoggedInUserProfile();
+        init();
+        setInterval(fetchNotifications, 60000);
+    }
 });
 
-// 전역 스코프에 deleteNotification 함수 추가
+// 전역 스코프에 필요한 함수들 노출
 window.deleteNotification = deleteNotification;

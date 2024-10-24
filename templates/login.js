@@ -1,27 +1,55 @@
+// Constants
+const API_BASE_URL = 'http://127.0.0.1:8000';
+
+// JWT 토큰 관리 유틸리티
+function getJWTToken() {
+    return localStorage.getItem('jwt_token');
+}
+
+function setJWTToken(token) {
+    localStorage.setItem('jwt_token', token);
+}
+
+function removeJWTToken() {
+    localStorage.removeItem('jwt_token');
+}
+
+function setCurrentUser(userData) {
+    localStorage.setItem('user', JSON.stringify(userData));
+}
+
+function removeCurrentUser() {
+    localStorage.removeItem('user');
+}
+
+// 로그인 페이지 초기화
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('login-form');
     const errorMessage = document.getElementById('error-message');
+
+    // 이미 로그인된 상태라면 메인 페이지로 리다이렉트
+    if (getJWTToken() && localStorage.getItem('user')) {
+        window.location.href = '/templates/index.html';
+        return;
+    }
 
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
         errorMessage.textContent = '';
 
         const formData = new FormData(form);
-        
-        // JSON 데이터로 변환
         const loginData = {
-            email: formData.get('email'),      // 이메일로 로그인하는 경우
+            email: formData.get('email'),
             password: formData.get('password')
         };
 
         try {
-            // JWT 토큰 획득 요청
-            const response = await fetch('http://127.0.0.1:8000/api/token/', {
+            // 로그인 요청
+            const response = await fetch(`${API_BASE_URL}/api/token/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                    'Origin': 'http://127.0.0.1:5500'
                 },
                 body: JSON.stringify(loginData)
             });
@@ -31,51 +59,62 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error(errorData.detail || '로그인에 실패했습니다.');
             }
 
-            const data = await response.json();
-
-            // JWT 토큰을 로컬 스토리지에 저장
-            localStorage.setItem('access_token', data.access);
-            localStorage.setItem('refresh_token', data.refresh);
+            const tokenData = await response.json();
+            setJWTToken(tokenData.access); // JWT 토큰 저장
 
             // 사용자 정보 가져오기
-            const userResponse = await fetch('http://127.0.0.1:8000/accounts/user/', {
+            const userResponse = await fetch(`${API_BASE_URL}/accounts/current-user/`, {
                 headers: {
-                    'Authorization': `Bearer ${data.access}`,
+                    'Authorization': `Bearer ${tokenData.access}`,
                     'Content-Type': 'application/json'
                 }
             });
 
-            if (userResponse.ok) {
-                const userData = await userResponse.json();
-                localStorage.setItem('username', userData.username);
-                localStorage.setItem('user_email', userData.email);
+            if (!userResponse.ok) {
+                throw new Error('사용자 정보를 가져오는데 실패했습니다.');
             }
 
-            // 로그인 성공 시 리다이렉트
+            const userData = await userResponse.json();
+            // 사용자 정보를 JSON 형태로 저장
+            setCurrentUser({
+                uuid: userData.uuid,
+                email: userData.email,
+                username: userData.username,
+                profile_image: userData.profile_image
+            });
+
+            // 로그인 성공 처리
             alert('로그인에 성공했습니다!');
             window.location.href = '/templates/index.html';
+
         } catch (error) {
             console.error('로그인 오류:', error);
             errorMessage.textContent = error.message || '로그인에 실패했습니다.';
             errorMessage.classList.remove('d-none');
+            
+            // 에러 발생 시 토큰과 사용자 정보 제거
+            removeJWTToken();
+            removeCurrentUser();
         }
     });
 });
 
 // JWT 토큰 관리를 위한 유틸리티 함수들
 const authUtils = {
-    // 토큰 갱신
     async refreshToken() {
-        const refresh_token = localStorage.getItem('refresh_token');
+        const token = getJWTToken();
+        if (!token) {
+            throw new Error('Refresh token not found');
+        }
         
         try {
-            const response = await fetch('http://127.0.0.1:8000/api/token/refresh/', {
+            const response = await fetch(`${API_BASE_URL}/api/token/refresh/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    refresh: refresh_token
+                    refresh: token
                 })
             });
 
@@ -84,35 +123,32 @@ const authUtils = {
             }
 
             const tokens = await response.json();
-            localStorage.setItem('access_token', tokens.access);
+            setJWTToken(tokens.access);
             return tokens.access;
         } catch (error) {
-            // 토큰 갱신 실패시 로그아웃 처리
             this.logout();
             throw error;
         }
     },
 
-    // 인증이 필요한 API 요청을 위한 헤더 생성
     getAuthHeaders() {
-        const token = localStorage.setItem('access_token');
+        const token = getJWTToken();
         return {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
         };
     },
 
-    // 로그아웃
     logout() {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('username');
-        localStorage.removeItem('user_email');
+        removeJWTToken();
+        removeCurrentUser();
         window.location.href = '/templates/login.html';
     },
 
-    // 로그인 상태 확인
     isAuthenticated() {
-        return !!localStorage.getItem('access_token');
+        return !!getJWTToken() && !!localStorage.getItem('user');
     }
 };
+
+// 전역 스코프에 authUtils 노출
+window.authUtils = authUtils;
