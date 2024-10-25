@@ -34,7 +34,7 @@
             <!-- Logo START -->
             <a class="navbar-brand" href="index.html">
                 <img class="light-mode-item navbar-brand-item" src="images/gamgyulhouselogo.png" alt="logo">
-				<img class="dark-mode-item navbar-brand-item" src="images/gamgyulhouselogo.png" alt="logo">
+                <img class="dark-mode-item navbar-brand-item" src="images/gamgyulhouselogo.png" alt="logo">
             </a>
             <!-- Logo END -->
 
@@ -66,81 +66,90 @@
                     </div>
                     <div class="card-body">
                         <form id="privacySettingsForm">
-                            <div class="form-group">
+                            <!-- 팔로워 설정 -->
+                            <div class="form-group mb-4">
                                 <h6>팔로워에게 공개될 정보</h6>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="follower_can_see_email">
-                                    <label class="form-check-label" for="follower_can_see_email">이메일</label>
+                                    <input class="form-check-input" type="checkbox" id="email_followers">
+                                    <label class="form-check-label" for="email_followers">이메일</label>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="follower_can_see_bio">
-                                    <label class="form-check-label" for="follower_can_see_bio">자기소개</label>
+                                    <input class="form-check-input" type="checkbox" id="bio_followers">
+                                    <label class="form-check-label" for="bio_followers">자기소개</label>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="follower_can_see_posts">
-                                    <label class="form-check-label" for="follower_can_see_posts">게시물</label>
+                                    <input class="form-check-input" type="checkbox" id="posts_followers">
+                                    <label class="form-check-label" for="posts_followers">게시물</label>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="follower_can_see_following_list">
-                                    <label class="form-check-label" for="follower_can_see_following_list">팔로잉 목록</label>
+                                    <input class="form-check-input" type="checkbox" id="following_list_followers">
+                                    <label class="form-check-label" for="following_list_followers">팔로잉 목록</label>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="follower_can_see_follower_list">
-                                    <label class="form-check-label" for="follower_can_see_follower_list">팔로워 목록</label>
+                                    <input class="form-check-input" type="checkbox" id="follower_list_followers">
+                                    <label class="form-check-label" for="follower_list_followers">팔로워 목록</label>
                                 </div>
                             </div>
-                            <div class="form-group">
+
+                            <!-- 팔로잉 설정 -->
+                            <div class="form-group mb-4">
                                 <h6>팔로잉에게 공개될 정보</h6>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="following_can_see_email">
-                                    <label class="form-check-label" for="following_can_see_email">이메일</label>
+                                    <input class="form-check-input" type="checkbox" id="email_following">
+                                    <label class="form-check-label" for="email_following">이메일</label>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="following_can_see_bio">
-                                    <label class="form-check-label" for="following_can_see_bio">자기소개</label>
+                                    <input class="form-check-input" type="checkbox" id="bio_following">
+                                    <label class="form-check-label" for="bio_following">자기소개</label>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="following_can_see_posts">
-                                    <label class="form-check-label" for="following_can_see_posts">게시물</label>
+                                    <input class="form-check-input" type="checkbox" id="posts_following">
+                                    <label class="form-check-label" for="posts_following">게시물</label>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="following_can_see_following_list">
-                                    <label class="form-check-label" for="following_can_see_following_list">팔로잉 목록</label>
+                                    <input class="form-check-input" type="checkbox" id="following_list_following">
+                                    <label class="form-check-label" for="following_list_following">팔로잉 목록</label>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="following_can_see_follower_list">
-                                    <label class="form-check-label" for="following_can_see_follower_list">팔로워 목록</label>
+                                    <input class="form-check-input" type="checkbox" id="follower_list_following">
+                                    <label class="form-check-label" for="follower_list_following">팔로워 목록</label>
                                 </div>
                             </div>
-                            <div class="form-group">
+
+                            <!-- 기타 사용자 설정 -->
+                            <div class="form-group mb-4">
                                 <h6>기타 사용자에게 공개될 정보</h6>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="others_can_see_email">
-                                    <label class="form-check-label" for="others_can_see_email">이메일</label>
+                                    <input class="form-check-input" type="checkbox" id="email_others">
+                                    <label class="form-check-label" for="email_others">이메일</label>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="others_can_see_bio">
-                                    <label class="form-check-label" for="others_can_see_bio">자기소개</label>
+                                    <input class="form-check-input" type="checkbox" id="bio_others">
+                                    <label class="form-check-label" for="bio_others">자기소개</label>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="others_can_see_posts">
-                                    <label class="form-check-label" for="others_can_see_posts">게시물</label>
+                                    <input class="form-check-input" type="checkbox" id="posts_others">
+                                    <label class="form-check-label" for="posts_others">게시물</label>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="others_can_see_following_list">
-                                    <label class="form-check-label" for="others_can_see_following_list">팔로잉 목록</label>
+                                    <input class="form-check-input" type="checkbox" id="following_list_others">
+                                    <label class="form-check-label" for="following_list_others">팔로잉 목록</label>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="others_can_see_follower_list">
-                                    <label class="form-check-label" for="others_can_see_follower_list">팔로워 목록</label>
+                                    <input class="form-check-input" type="checkbox" id="follower_list_others">
+                                    <label class="form-check-label" for="follower_list_others">팔로워 목록</label>
                                 </div>
                             </div>
-                            <button type="button" id="saveBtn" class="btn btn-primary">설정 저장</button>
-                            <button type="button" id="cancelBtn" class="btn btn-secondary">취소</button>
+
+                            <div class="d-flex gap-2">
+                                <button type="button" id="saveBtn" class="btn btn-primary">설정 저장</button>
+                                <button type="button" id="cancelBtn" class="btn btn-secondary">취소</button>
+                            </div>
                         </form>
                     </div>
                 </div>
                 <!-- Privacy Settings END -->
+
                 <!-- Password Change START -->
                 <div class="card">
                     <div class="card-header border-0 pb-0">
@@ -154,8 +163,12 @@
                                 <input type="password" class="form-control" id="old_password" required>
                             </div>
                             <div class="mb-3">
-                                <label for="new_password" class="form-label">새 비밀번호</label>
-                                <input type="password" class="form-control" id="new_password" required>
+                                <label for="new_password1" class="form-label">새 비밀번호</label>
+                                <input type="password" class="form-control" id="new_password1" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="new_password2" class="form-label">새 비밀번호 확인</label>
+                                <input type="password" class="form-control" id="new_password2" required>
                             </div>
                             <button type="button" id="changePasswordBtn" class="btn btn-primary">비밀번호 변경</button>
                         </form>
@@ -163,38 +176,6 @@
                     <!-- Card body END -->
                 </div>
                 <!-- Password Change END -->
-
-                <!-- Account Deactivation START -->
-                <div class="card">
-                    <div class="card-header border-0 pb-0">
-                        <h5 class="card-title">계정 비활성화</h5>
-                    </div>
-                    <!-- Card body START -->
-                    <div class="card-body">
-                        <p class="text-danger">주의: 계정을 비활성화하면 로그인할 수 없게 됩니다. 나중에 다시 활성화할 수 있습니다.</p>
-                        <button type="button" id="deactivateAccountBtn" class="btn btn-danger">계정 비활성화</button>
-                    </div>
-                    <!-- Card body END -->
-                </div>
-                <!-- Account Deactivation END -->
-
-                <!-- Account Deletion START -->
-                <div class="card">
-                    <div class="card-header border-0 pb-0">
-                        <h5 class="card-title">계정 삭제</h5>
-                    </div>
-                    <!-- Card body START -->
-                    <div class="card-body">
-                        <p class="text-danger">경고: 계정을 삭제하면 모든 데이터가 영구적으로 제거됩니다. 이 작업은 취소할 수 없습니다.</p>
-                        <div class="mb-3">
-                            <label for="deleteConfirmation" class="form-label">삭제 확인 코드 입력:</label>
-                            <input type="text" class="form-control" id="deleteConfirmation" placeholder="DELETE를 입력하세요">
-                        </div>
-                        <button type="button" id="deleteAccountBtn" class="btn btn-danger">계정 삭제</button>
-                    </div>
-                    <!-- Card body END -->
-                </div>
-                <!-- Account Deletion END -->
             </div>
             <!-- Main content END -->
         </div> <!-- Row END -->
