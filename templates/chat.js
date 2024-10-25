@@ -1,5 +1,5 @@
 const API_BASE_URL = 'http://127.0.0.1:8000';
-const DEFAULT_PROFILE_IMAGE = '/templates/images/team_profile.png';
+const DEFAULT_PROFILE_IMAGE = '/templates/images/placeholder.jpg';
 
 // Global variables
 let currentUserId;
