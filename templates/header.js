@@ -222,12 +222,13 @@ async function fetchNotifications() {
 async function deleteNotification(notificationId) {
     try {
         const response = await fetchWithAuth(
-            `${API_BASE_URL}/notifications/${notificationId}/delete/`, 
+            `${API_BASE_URL}/notifications/${notificationId}/`,  // URL 수정
             'DELETE'
         );
         if (response && response.ok) {
             notifications = notifications.filter(n => n.id !== notificationId);
             renderNotifications();
+            showSuccessMessage('알림이 삭제되었습니다.');
         }
     } catch (error) {
         console.error('Error deleting notification:', error);
@@ -291,7 +292,6 @@ async function init() {
     }
 }
 
-// WebSocket 설정 함수
 function setupWebSocket(userId) {
     if (!userId) {
         const currentUser = getCurrentUser();
@@ -303,22 +303,23 @@ function setupWebSocket(userId) {
         return;
     }
 
-    console.log('Setting up WebSocket with ID:', userId);
-
-    // URL 패턴을 notifications로 수정
-    const socket = new WebSocket(`ws://${API_BASE_URL.replace('http://', '')}/ws/notifications/${userId}/`);
+    const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.hostname}:8000/ws/notifications/${userId}/`;
+    console.log('Attempting to connect to:', wsUrl);
+    
+    const socket = new WebSocket(wsUrl);
 
     socket.onopen = function(e) {
-        console.log('WebSocket connection established successfully');
+        console.log('WebSocket connection established');
     };
 
     socket.onmessage = function(e) {
         try {
             const data = JSON.parse(e.data);
             console.log('Received WebSocket message:', data);
-            if (data.alarm) {
-                notifications.unshift(data.alarm);
+            if (data.notification) {  // 백엔드의 메시지 포맷에 맞춤
+                notifications.unshift(data.notification);
                 renderNotifications();
+                // 알림음 재생이나 토스트 메시지 표시 등 추가 가능
             }
         } catch (error) {
             console.error('Error processing WebSocket message:', error);
@@ -331,19 +332,17 @@ function setupWebSocket(userId) {
         } else {
             console.log('WebSocket connection died');
         }
-        setTimeout(() => setupWebSocket(userId), 5000);
+        // 재연결 시도 전에 연결 상태 확인
+        if (!document.hidden) {  // 페이지가 보이는 상태일 때만 재연결
+            setTimeout(() => setupWebSocket(userId), 5000);
+        }
     };
 
     socket.onerror = function(e) {
         console.error('WebSocket error occurred:', e);
+        console.log('WebSocket readyState:', socket.readyState);
+        console.log('WebSocket URL:', socket.url);
     };
-
-    // 연결 해제 처리를 위한 이벤트 리스너 추가
-    window.addEventListener('beforeunload', () => {
-        if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.close();
-        }
-    });
 
     return socket;
 }

@@ -1,21 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Constants and Config
-    const API_BASE_URL = 'http://127.0.0.1:8000';
-    const DEFAULT_PROFILE_IMAGE = '/templates/images/team_profile.png';
+    // Constants
     const USERS_TO_SHOW = 5;
-
-    // JWT 관련 유틸리티 함수
-    function getJWTToken() {
-        return localStorage.getItem('jwt_token');
-    }
-
-    function setJWTToken(token) {
-        localStorage.setItem('jwt_token', token);
-    }
-
-    function removeJWTToken() {
-        localStorage.removeItem('jwt_token');
-    }
 
     // DOM Elements
     const profileImage = document.getElementById('profile-image');
@@ -27,104 +12,60 @@ document.addEventListener('DOMContentLoaded', function() {
     const followersList = document.getElementById('followers');
     const followingList = document.getElementById('following');
     const productList = document.getElementById('product-list');
-    const loginLink = document.getElementById('login-link');
-    const logoutBtn = document.getElementById('logout-btn');
     const editProfileBtn = document.getElementById('edit-profile-btn');
     const profileSettingsBtn = document.getElementById('profile-settings-btn');
     const searchInput = document.getElementById('searchInput');
     const searchResults = document.getElementById('searchResults');
-    const navProfileImage = document.getElementById('nav-profile-image');
-    const dropdownProfileImage = document.getElementById('dropdown-profile-image');
-    const dropdownUsername = document.getElementById('dropdown-username');
-    const dropdownEmail = document.getElementById('dropdown-email');
-    const signOutLink = document.getElementById('sign-out-link');
-    const viewProfileLink = document.getElementById('view-profile-link');
-    const profileSettingsLink = document.getElementById('profile-settings-link');
     const postList = document.getElementById('post-list');
-    const notificationCount = document.getElementById('notification-count');
-    const notificationBadge = document.getElementById('notification-badge');
-    const notificationList = document.getElementById('notification-list');
-    const clearAllNotificationsBtn = document.getElementById('clear-all-notifications');
 
     let allFollowers = [];
     let allFollowing = [];
-    let notifications = [];
 
-    // API 요청 함수 수정
-    async function fetchWithAuth(url, method = 'GET', body = null) {
-        const token = getJWTToken();
-        if (!token && !url.includes('/login/')) {
-            window.location.href = '/templates/login.html';
-            return;
-        }
-
-        const options = {
-            method: method,
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-            }
-        };
-
-        if (body && method !== 'GET') {
-            options.body = JSON.stringify(body);
-        }
-
-        const response = await fetch(url, options);
-
-        if (response.status === 401) {
-            removeJWTToken();
-            window.location.href = '/templates/login.html';
-            return;
-        }
-
-        return response;
+    // 맨 위 Constants 아래에 추가
+    function getProfileIdFromUrl() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const uuid = urlParams.get('uuid');
+        console.log('URL UUID:', uuid); // URL 파라미터 로그
+        return uuid;
     }
-
-    function showErrorMessage(message) {
-        alert(message);
-    }
-
+    
+    // loadProfile 함수도 수정
     async function loadProfile() {
         try {
+            const urlUuid = getProfileIdFromUrl();
             const currentUser = getCurrentUser();
             
-            if (!currentUser || !currentUser.uuid) {
-                showLoginLink();
+            console.log('URL UUID:', urlUuid);
+            console.log('Current User:', currentUser);
+            
+            // URL에 uuid가 있으면 그것을 사용, 없으면 현재 로그인한 사용자의 id 사용
+            const uuid = urlUuid || (currentUser ? currentUser.id : null);
+            
+            console.log('Selected UUID for profile load:', uuid);
+            
+            if (!uuid) {
+                console.log('No UUID found, redirecting to login');
+                window.location.href = '/templates/login.html';
                 return;
             }
-    
-            const response = await fetchWithAuth(`${API_BASE_URL}/accounts/profile/${currentUser.uuid}/`);
+        
+            const response = await fetchWithAuth(`${API_BASE_URL}/profiles/profile/${uuid}/`);
             if (response.ok) {
                 const profileData = await response.json();
+                console.log('Profile Data:', profileData);
                 updateProfileUI(profileData);
-            } else if (response.status === 401) {
-                showLoginLink();
             } else {
+                console.error('Profile load failed with status:', response.status);
                 throw new Error('프로필 로드 실패');
             }
         } catch (error) {
             console.error('프로필 로드 중 오류 발생:', error);
-            showErrorMessage('프로필을 불러오는 데 실패했습니다. 다시 시도해 주세요.');
-        }
-    }
-    
-    // 현재 사용자 정보를 가져오는 함수
-    function getCurrentUser() {
-        // localStorage에서 사용자 정보 가져오기
-        const userStr = localStorage.getItem('user');
-        if (!userStr) return null;
-        
-        try {
-            return JSON.parse(userStr);
-        } catch (error) {
-            console.error('사용자 정보 파싱 오류:', error);
-            return null;
+            showErrorMessage('프로필을 불러오는 데 실패했습니다.');
         }
     }
 
     function updateProfileUI(profileData) {
-        if (profileImage) profileImage.src = getFullImageUrl(profileData.profile_image) || DEFAULT_PROFILE_IMAGE;
+        if (profileImage) profileImage.src = getFullImageUrl(profileData.profile_image);
         if (usernameElement) usernameElement.textContent = profileData.username;
         if (bioElement) bioElement.textContent = profileData.bio || '소개가 없습니다.';
         if (followersCountElement) followersCountElement.textContent = profileData.followers_count || 0;
@@ -136,9 +77,6 @@ document.addEventListener('DOMContentLoaded', function() {
         renderPostList(profileData.posts || []);
         renderProductList(profileData.products || []);
         updateProfileButtons(profileData.is_self);
-    
-        if (loginLink) loginLink.style.display = 'none';
-        if (logoutBtn) logoutBtn.style.display = 'inline';
     }
 
     function updateEmailDisplay(profileData) {
@@ -156,99 +94,67 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateProfileButtons(isSelf) {
         if (isSelf) {
-            followBtn.style.display = 'none';
-            editProfileBtn.style.display = 'inline';
-            profileSettingsBtn.style.display = 'inline';
+            if (followBtn) followBtn.style.display = 'none';
+            if (editProfileBtn) editProfileBtn.style.display = 'inline';
+            if (profileSettingsBtn) profileSettingsBtn.style.display = 'inline';
         } else {
-            followBtn.style.display = 'inline';
-            editProfileBtn.style.display = 'none';
-            profileSettingsBtn.style.display = 'none';
+            if (followBtn) followBtn.style.display = 'inline';
+            if (editProfileBtn) editProfileBtn.style.display = 'none';
+            if (profileSettingsBtn) profileSettingsBtn.style.display = 'none';
         }
     }
 
-    function updateProfileDropdown(profileData) {
-        if (navProfileImage) navProfileImage.src = getFullImageUrl(profileData.profile_image) || DEFAULT_PROFILE_IMAGE;
-        if (dropdownProfileImage) dropdownProfileImage.src = getFullImageUrl(profileData.profile_image) || DEFAULT_PROFILE_IMAGE;
-        if (dropdownUsername) dropdownUsername.textContent = profileData.username;
-        if (dropdownEmail) dropdownEmail.textContent = profileData.email;
-    
-        if (viewProfileLink) {
-            viewProfileLink.href = `/templates/profile.html?username=${profileData.username}`;
-        }
-    
-        if (profileSettingsLink) {
-            profileSettingsLink.href = `/templates/profile-settings.html?username=${profileData.username}`;
-        }
-    }
-
-    // 팔로워 목록을 렌더링할 때
+    // Followers/Following Functions
     function renderFollowersList(followers) {
-        if (!Array.isArray(followers)) {
-            console.warn('Followers data is not an array:', followers);
-            followers = [];
-        }
-        allFollowers = followers; // 모든 팔로워를 포함
+        if (!Array.isArray(followers)) return;
+        allFollowers = followers;
         updateFollowersList();
-        if (followersCountElement) {
-            followersCountElement.textContent = allFollowers.length;
-        }
     }
     
-    // 팔로잉 목록을 렌더링할 때
     function renderFollowingList(following) {
-        if (!Array.isArray(following)) {
-            console.warn('Following data is not an array:', following);
-            following = [];
-        }
-        allFollowing = following; // 모든 팔로잉 사용자를 포함
+        if (!Array.isArray(following)) return;
+        allFollowing = following;
         updateFollowingList();
     }
 
     function updateFollowersList(showAll = false) {
+        if (!followersList) return;
         const followersToShow = showAll ? allFollowers : allFollowers.slice(0, USERS_TO_SHOW);
         followersList.innerHTML = followersToShow.map(follower => createUserListItem(follower, 'follower')).join('');
         
         const showMoreFollowersBtn = document.getElementById('show-more-followers');
-        if (allFollowers.length > USERS_TO_SHOW) {
-            showMoreFollowersBtn.style.display = showAll ? 'none' : 'block';
-            showMoreFollowersBtn.onclick = () => updateFollowersList(true);
-        } else {
-            showMoreFollowersBtn.style.display = 'none';
+        if (showMoreFollowersBtn) {
+            showMoreFollowersBtn.style.display = allFollowers.length > USERS_TO_SHOW ? (showAll ? 'none' : 'block') : 'none';
         }
-
-        addUserInteractionListeners();
     }
 
     function updateFollowingList(showAll = false) {
+        if (!followingList) return;
         const followingToShow = showAll ? allFollowing : allFollowing.slice(0, USERS_TO_SHOW);
         followingList.innerHTML = followingToShow.map(following => createUserListItem(following, 'following')).join('');
         
         const showMoreFollowingBtn = document.getElementById('show-more-following');
-        if (allFollowing.length > USERS_TO_SHOW) {
-            showMoreFollowingBtn.style.display = showAll ? 'none' : 'block';
-            showMoreFollowingBtn.onclick = () => updateFollowingList(true);
-        } else {
-            showMoreFollowingBtn.style.display = 'none';
+        if (showMoreFollowingBtn) {
+            showMoreFollowingBtn.style.display = allFollowing.length > USERS_TO_SHOW ? (showAll ? 'none' : 'block') : 'none';
         }
-
-        addUserInteractionListeners();
     }
 
+    // 사용자 비교 시에도 id 사용하도록 수정
     function createUserListItem(user, type) {
         const currentUser = getCurrentUser();
-        const isCurrentUser = user.uuid === currentUser.uuid;
-        
+        const isCurrentUser = currentUser && user.id === currentUser.id;
+
         return `
             <li class="list-group-item d-flex align-items-center justify-content-between">
                 <div class="d-flex align-items-center">
-                     <img src="${getFullImageUrl(user.profile_image) || DEFAULT_PROFILE_IMAGE}" alt="${user.username}" class="avatar-img rounded-circle" style="width: 40px; height: 40px;">
+                     <img src="${getFullImageUrl(user.profile_image)}" alt="${user.username}" class="avatar-img rounded-circle" style="width: 40px; height: 40px;">
                     <div class="ms-3">
                         <h6 class="mb-0">${user.username}${isCurrentUser ? ' (나)' : ''}</h6>
                     </div>
                 </div>
                 <div>
                     ${!isCurrentUser ? `
-                        <button class="btn btn-sm ${type === 'following' ? 'btn-danger-soft unfollow-btn' : 'btn-success-soft follow-btn'}" data-user-uuid="${user.uuid}">
+                        <button class="btn btn-sm ${type === 'following' ? 'btn-danger-soft unfollow-btn' : 'btn-success-soft follow-btn'}" data-user-uuid="${user.id}">
                             ${type === 'following' ? '언팔로우' : '팔로우'}
                         </button>
                     ` : ''}
@@ -257,14 +163,15 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
     }
 
-    // 새로운 함수 추가
+    // Post and Product Functions
     function renderPostList(posts) {
+        if (!postList) return;
         if (posts && posts.length > 0) {
-            const postListHtml = posts.map(post => `
+            postList.innerHTML = posts.map(post => `
                 <div class="col-sm-6 col-lg-4">
                     <div class="card h-100">
                         <div class="position-relative">
-                            <img src="${post.images[0] ? `${API_BASE_URL}${post.images[0]}` : DEFAULT_PROFILE_IMAGE}" class="card-img-top" alt="게시물 이미지">
+                            <img src="${post.images[0] ? getFullImageUrl(post.images[0]) : DEFAULT_PROFILE_IMAGE}" class="card-img-top" alt="게시물 이미지">
                         </div>
                         <div class="card-body">
                             <h5 class="card-title">${post.content.substring(0, 50)}${post.content.length > 50 ? '...' : ''}</h5>
@@ -281,21 +188,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
             `).join('');
-            
-            postList.innerHTML = postListHtml;
         } else {
             postList.innerHTML = '<p class="col-12">등록된 게시물이 없습니다.</p>';
         }
     }
 
-    // Product Functions
     function renderProductList(products) {
+        if (!productList) return;
         if (products && products.length > 0) {
-            const productListHtml = products.map(product => `
+            productList.innerHTML = products.map(product => `
                 <div class="card mb-3">
                     <div class="row g-0">
                         <div class="col-md-4">
-                            <img src="${product.images[0] || DEFAULT_PROFILE_IMAGE}" class="img-fluid rounded-start" alt="${product.name}">
+                            <img src="${getFullImageUrl(product.images[0])}" class="img-fluid rounded-start" alt="${product.name}">
                         </div>
                         <div class="col-md-8">
                             <div class="card-body">
@@ -311,17 +216,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
             `).join('');
-            
-            productList.innerHTML = productListHtml;
         } else {
             productList.innerHTML = '<p>등록된 상품이 없습니다.</p>';
         }
     }
 
-    // Event Handlers
-    async function handleFollow() {
+    // Follow/Unfollow 함수도 id 사용하도록 수정
+    async function handleFollow(userId) {
         try {
-            const response = await fetchWithCSRF(`${API_BASE_URL}/accounts/follow/${userId}/`, 'POST');
+            const response = await fetchWithAuth(`${API_BASE_URL}/follow/follow/${userId}/`, 'POST');
             if (response.ok) {
                 loadProfile();
             } else {
@@ -329,23 +232,26 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } catch (error) {
             console.error('팔로우 중 오류 발생:', error);
-            showErrorMessage('팔로우 처리 중 오류가 발생했습니다. 다시 시도해 주세요.');
+            showErrorMessage('팔로우 처리 중 오류가 발생했습니다.');
         }
     }
 
     async function handleFollowUnfollow(event) {
-        const targetUuid = event.target.getAttribute('data-user-uuid');
+        if (!event.target.classList.contains('follow-btn') && !event.target.classList.contains('unfollow-btn')) return;
+        
+        const targetId = event.target.getAttribute('data-user-uuid'); // 여기서는 속성명은 uuid로 두되 값은 id를 사용
         const isFollowing = event.target.classList.contains('unfollow-btn');
-        const url = isFollowing 
-            ? `${API_BASE_URL}/accounts/unfollow/${targetUuid}/`
-            : `${API_BASE_URL}/accounts/follow/${targetUuid}/`;
-
+        const url = `${API_BASE_URL}/follow/${isFollowing ? 'unfollow' : 'follow'}/${targetId}/`;
+    
         try {
             const response = await fetchWithAuth(url, isFollowing ? 'DELETE' : 'POST');
             if (response.ok) {
                 const data = await response.json();
                 updateFollowButton(event.target, !isFollowing);
-                updateFollowCounts(data);
+                if (followingCountElement) {
+                    followingCountElement.textContent = data.following_count;
+                }
+                loadProfile();
             } else {
                 throw new Error(isFollowing ? '언팔로우 실패' : '팔로우 실패');
             }
@@ -357,64 +263,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateFollowButton(button, isCurrentlyFollowing) {
         if (isCurrentlyFollowing) {
-            button.textContent = '팔로우';
-            button.classList.remove('unfollow-btn', 'btn-danger-soft');
-            button.classList.add('follow-btn', 'btn-success-soft');
-        } else {
             button.textContent = '언팔로우';
             button.classList.remove('follow-btn', 'btn-success-soft');
             button.classList.add('unfollow-btn', 'btn-danger-soft');
+        } else {
+            button.textContent = '팔로우';
+            button.classList.remove('unfollow-btn', 'btn-danger-soft');
+            button.classList.add('follow-btn', 'btn-success-soft');
         }
-    }
-
-    function updateFollowCounts(data) {
-        if (followingCountElement) {
-            followingCountElement.textContent = data.following_count;
-        }
-    }
-
-    // 로그인 처리 함수
-    async function handleLogin(email, password) {
-        try {
-            const response = await fetch(`${API_BASE_URL}/accounts/login/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email, password })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                setJWTToken(data.token);
-                localStorage.setItem('user_uuid', data.uuid);
-                window.location.href = '/templates/profile.html?uuid=' + data.uuid;
-            } else {
-                throw new Error('로그인 실패');
-            }
-        } catch (error) {
-            console.error('로그인 중 오류 발생:', error);
-            showErrorMessage('로그인 처리 중 오류가 발생했습니다.');
-        }
-    }
-
-
-    // 로그아웃 처리 함수
-    async function handleLogout(e) {
-        e.preventDefault();
-        removeJWTToken();
-        localStorage.removeItem('user_uuid');
-        window.location.href = '/templates/login.html';
     }
 
     // Search Functions
     async function searchUsers(query) {
         try {
-            const response = await fetchWithCSRF(`${API_BASE_URL}/accounts/search/?q=${encodeURIComponent(query)}`);
+            const response = await fetchWithAuth(`${API_BASE_URL}/search/search-profile/?q=${encodeURIComponent(query)}`);
             if (!response.ok) {
                 throw new Error('Search request failed');
             }
             const data = await response.json();
+            console.log('Search API response:', data);
+            console.log('First user:', data.results[0]);
             displaySearchResults(data);
         } catch (error) {
             console.error('Search error:', error);
@@ -422,7 +290,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Search Functions
     function displaySearchResults(data) {
+        if (!searchResults) return;
+
         const results = data.results || [];
         searchResults.innerHTML = '';
 
@@ -432,56 +303,74 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         results.forEach(user => {
+            console.log('User data:', user); // 사용자 데이터 확인
             const resultItem = document.createElement('div');
             resultItem.className = 'search-result-item';
             resultItem.innerHTML = `
-                <img src="${user.profile_image || DEFAULT_PROFILE_IMAGE}" alt="${user.username}" width="30">
+                <img src="${getFullImageUrl(user.profile_image)}" alt="${user.username}" width="30">
                 <span>${user.username}</span>
             `;
-            resultItem.addEventListener('click', () => {
-                window.location.href = `/templates/profile.html?uuid=${user.uuid}`;
+
+            resultItem.addEventListener('click', function() {
+                // user.uuid 대신 user.id 사용
+                const newUrl = `/templates/profile.html?uuid=${user.id}`;
+                console.log('Navigating to:', newUrl);
+                window.location.href = newUrl;
             });
+
             searchResults.appendChild(resultItem);
         });
 
         searchResults.style.display = 'block';
     }
 
-    // Helper Functions
-    function addUserInteractionListeners() {
-        document.querySelectorAll('.follow-btn, .unfollow-btn').forEach(button => {
-            button.addEventListener('click', handleFollowUnfollow);
-        });
-    }
-
-    function showLoginLink() {
-        loginLink.style.display = 'inline';
-        logoutBtn.style.display = 'none';
-    }
-
-    // Initialization
-    async function loadLoggedInUserProfile() {
-        try {
-            const loggedInUsername = getCurrentUserId();
-            if (!loggedInUsername) {
-                throw new Error('로그인한 사용자 정보를 찾을 수 없습니다.');
-            }
-            const response = await fetchWithCSRF(`${API_BASE_URL}/accounts/profile/${loggedInUsername}/`);
-            if (response.ok) {
-                const profileData = await response.json();
-                updateProfileDropdown(profileData);
-            } else {
-                throw new Error('로그인한 사용자 프로필 로드 실패');
-            }
-        } catch (error) {
-            console.error('로그인한 사용자 프로필 로드 중 오류 발생:', error);
-            showErrorMessage('로그인한 사용자 프로필을 불러오는 데 실패했습니다.');
+    // Event Listeners
+    function addEventListeners() {
+        if (editProfileBtn) {
+            editProfileBtn.addEventListener('click', () => {
+                window.location.href = '/templates/edit-profile.html';
+            });
         }
-    }
 
-    function initialize() {
-        loadProfile();
-        loadLoggedInUserProfile();
+        if (profileSettingsBtn) {
+            profileSettingsBtn.addEventListener('click', () => {
+                const currentUser = getCurrentUser();
+                if (currentUser?.uuid) {
+                    window.location.href = `/templates/profile-settings.html?uuid=${currentUser.uuid}`;
+                }
+            });
+        }
+
+        if (followBtn) {
+            followBtn.addEventListener('click', handleFollow);
+        }
+
+        document.addEventListener('click', function(event) {
+            handleFollowUnfollow(event);
+        });
+
+        if (searchInput) {
+            let debounceTimer;
+            searchInput.addEventListener('input', function() {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    const query = this.value.trim();
+                    if (query.length > 0) {
+                        searchUsers(query);
+                    } else {
+                        if (searchResults) {
+                            searchResults.style.display = 'none';
+                        }
+                    }
+                }, 300);
+            });
+        }
+
+        document.addEventListener('click', function(event) {
+            if (searchResults && !searchResults.contains(event.target) && event.target !== searchInput) {
+                searchResults.style.display = 'none';
+            }
+        });
 
         const showMoreFollowersBtn = document.getElementById('show-more-followers');
         const showMoreFollowingBtn = document.getElementById('show-more-following');
@@ -494,261 +383,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Event Listeners
-    editProfileBtn.addEventListener('click', () => {
-        window.location.href = '/templates/edit-profile.html';
-    });
-
-    // 프로필 설정 변경
-    if (profileSettingsBtn) {
-        profileSettingsBtn.addEventListener('click', () => {
-            const currentUserUuid = getCurrentUser().uuid;
-            window.location.href = `/templates/profile-settings.html?uuid=${currentUserUuid}`;
-        });
-    }
-
-    if (profileSettingsLink) {
-        profileSettingsLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            const currentUserUuid = getCurrentUser().uuid;
-            window.location.href = `/templates/profile-settings.html?uuid=${currentUserUuid}`;
-        });
-    }
-
-    followBtn.addEventListener('click', handleFollow);
-    signOutLink.addEventListener('click', handleLogout);
-
-    let debounceTimer;
-    searchInput.addEventListener('input', function() {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-            const query = this.value.trim();
-            if (query.length > 0) {
-                searchUsers(query);
-            } else {
-                searchResults.style.display = 'none';
-            }
-        }, 300);
-    });
-
-    document.addEventListener('click', function(event) {
-        if (!searchResults.contains(event.target) && event.target !== searchInput) {
-            searchResults.style.display = 'none';
-        }
-    });
-
     // Initialize
-    initialize();
-
-    // Notification Functions
-    async function fetchCurrentUserInfo() {
-        try {
-            const response = await fetchWithCSRF(`${API_BASE_URL}/accounts/current-user/`);
-            if (response.ok) {
-                const userData = await response.json();
-                currentUserId = userData.id;
-                return userData;
-            } else {
-                throw new Error('Failed to fetch current user info');
-            }
-        } catch (error) {
-            console.error('Error fetching current user info:', error);
-            showErrorMessage('사용자 정보를 불러오는 데 실패했습니다.');
-        }
+    function init() {
+        loadProfile();
+        addEventListeners();
     }
 
-    function updateNotificationCount() {
-        const count = notifications.length;
-        if (notificationCount) notificationCount.textContent = count;
-        if (notificationBadge) notificationBadge.style.display = count > 0 ? 'inline' : 'none';
-    }
-
-    function renderNotifications() {
-        console.log('Notifications data:', notifications);
-
-        if (!Array.isArray(notifications)) {
-            console.error('notifications is not an array:', notifications);
-            return;
-        }
-
-        if (!notificationList) {
-            console.error('Notification list element not found');
-            return;
-        }
-
-        notificationList.innerHTML = '';
-        notifications.forEach((notification) => {
-            const li = document.createElement('li');
-            li.innerHTML = `
-                <div class="list-group-item list-group-item-action rounded d-flex border-0 mb-1 p-3">
-                    <div class="avatar text-center d-none d-sm-inline-block">
-                        <img class="avatar-img rounded-circle" src="${getFullImageUrl(notification.sender.profile_image)}" alt="">
-                    </div>
-                    <div class="ms-sm-3 d-flex">
-                        <div>
-                            <p class="small mb-2">${notification.message}</p>
-                            <p class="small ms-3">${new Date(notification.created_at).toLocaleString()}</p>
-                        </div>
-                        <button class="btn btn-sm btn-danger-soft ms-auto" onclick="deleteNotification('${notification.id}')">삭제</button>
-                    </div>
-                </div>
-            `;
-            notificationList.appendChild(li);
-        });
-        updateNotificationCount();
-    }
-
-    async function fetchNotifications() {
-        try {
-            const response = await fetchWithCSRF(`${API_BASE_URL}/alarm/`);
-            if (response.ok) {
-                const data = await response.json();
-                console.log('Server response:', data);
-                
-                notifications = Array.isArray(data) ? data : (data.results || []);
-                
-                renderNotifications();
-            } else {
-                throw new Error('알림 가져오기 실패');
-            }
-        } catch (error) {
-            console.error('Error fetching notifications:', error);
-            showErrorMessage('알림을 불러오는 데 실패했습니다.');
-        }
-    }
-
-    async function deleteNotification(notificationId) {
-        try {
-            const response = await fetchWithCSRF(`${API_BASE_URL}/alarm/${notificationId}/delete/`, 'DELETE');
-            if (response.ok) {
-                notifications = notifications.filter(n => n.id !== notificationId);
-                renderNotifications();
-            } else {
-                throw new Error('알림 삭제 실패');
-            }
-        } catch (error) {
-            console.error('Error deleting notification:', error);
-            showErrorMessage('알림 삭제 중 오류가 발생했습니다.');
-        }
-    }
-
-    async function clearAllNotifications() {
-        try {
-            const response = await fetchWithCSRF(`${API_BASE_URL}/alarm/delete-all/`, 'DELETE');
-            if (response.ok) {
-                notifications = [];
-                renderNotifications();
-            } else {
-                throw new Error('모든 알림 삭제 실패');
-            }
-        } catch (error) {
-            console.error('Error clearing all notifications:', error);
-            showErrorMessage('모든 알림 삭제 중 오류가 발생했습니다.');
-        }
-    }
-
-    // WebSocket 연결 수정
-    function setupWebSocket() {
-        const userUuid = localStorage.getItem('user_uuid');
-        if (!userUuid) {
-            console.error('User UUID is not available');
-            return;
-        }
-
-        const socket = new WebSocket(`ws://${API_BASE_URL.replace('http://', '')}/ws/alarm/${userUuid}/`);
-
-        socket.onmessage = function(e) {
-            const data = JSON.parse(e.data);
-            if (data.alarm) {
-                notifications.unshift(data.alarm);
-                renderNotifications();
-            }
-        };
-
-        socket.onclose = function(e) {
-            console.error('Alarm socket closed unexpectedly');
-            setTimeout(() => setupWebSocket(), 5000);
-        };
-
-        socket.onerror = function(e) {
-            console.error('WebSocket error occurred', e);
-        };
-    }
-
-    // Initialization
-    async function init() {
-        try {
-            const userData = await fetchCurrentUserInfo();
-            if (userData) {
-                updateProfileDropdown(userData);
-                setupWebSocket();
-                await fetchNotifications();
-                await loadProfile();
-                await loadLoggedInUserProfile();
-            } else {
-                throw new Error('Failed to initialize user data');
-            }
-        } catch (error) {
-            console.error('Error initializing application:', error);
-            showErrorMessage('애플리케이션을 초기화하는 데 실패했습니다.');
-        }
-    }
-
-    // Event Listeners
-    editProfileBtn.addEventListener('click', () => {
-        window.location.href = '/templates/edit-profile.html';
-    });
-
-    // 프로필 설정 변경
-    if (profileSettingsBtn) {
-        profileSettingsBtn.addEventListener('click', () => {
-            const currentUserUuid = getCurrentUser().uuid;
-            window.location.href = `/templates/profile-settings.html?uuid=${currentUserUuid}`;
-        });
-    }
-
-    if (profileSettingsLink) {
-        profileSettingsLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            const currentUserUuid = getCurrentUser().uuid;
-            window.location.href = `/templates/profile-settings.html?uuid=${currentUserUuid}`;
-        });
-    }
-
-    followBtn.addEventListener('click', handleFollow);
-    signOutLink.addEventListener('click', handleLogout);
-
-    if (clearAllNotificationsBtn) {
-        clearAllNotificationsBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            clearAllNotifications();
-        });
-    }
-
-    searchInput.addEventListener('input', function() {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-            const query = this.value.trim();
-            if (query.length > 0) {
-                searchUsers(query);
-            } else {
-                searchResults.style.display = 'none';
-            }
-        }, 300);
-    });
-
-    document.addEventListener('click', function(event) {
-        if (!searchResults.contains(event.target) && event.target !== searchInput) {
-            searchResults.style.display = 'none';
-        }
-    });
-
-    // Initialize
     init();
-
-    // 주기적으로 알림 업데이트 (선택사항)
-    setInterval(fetchNotifications, 60000); // 1분마다 업데이트
 });
-    
-// 전역 스코프에 deleteNotification 함수 추가
-window.deleteNotification = deleteNotification;
