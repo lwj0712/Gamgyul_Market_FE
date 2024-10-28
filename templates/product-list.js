@@ -1,36 +1,58 @@
 let currentPage = 1;
 let searchQuery = '';
 let searchCategory = 'all';
+let ordering = '-created_at';
 
 document.addEventListener('DOMContentLoaded', function() {
     loadProducts(currentPage, searchQuery, searchCategory);
 
     const searchForm = document.getElementById('search-form');
     searchForm.innerHTML = `
-        <div class="input-group mb-3">
-            <select class="form-select flex-grow-0" style="width: auto;" id="search-category">
-                <option value="all">전체</option>
-                <option value="name">상품명</option>
-                <option value="variety">품종</option>
-                <option value="growing_region">재배지역</option>
-                <option value="user">판매자</option>
+        <div class="d-flex gap-3 mb-3">
+            <div class="input-group">
+                <select class="form-select flex-grow-0" style="width: auto;" id="search-category">
+                    <option value="all">전체</option>
+                    <option value="name">상품명</option>
+                    <option value="user">판매자</option>
+                </select>
+                <input type="text" class="form-control" id="search-input" placeholder="검색어를 입력하세요">
+                <button class="btn btn-primary" type="submit">검색</button>
+            </div>
+            <select class="form-select flex-grow-0" style="width: auto;" id="order-select">
+                <option value="-created_at" selected>최신순</option>
+                <option value="created_at">오래된순</option>
             </select>
-            <input type="text" class="form-control" id="search-input" placeholder="검색어를 입력하세요">
-            <button class="btn btn-primary" type="submit">검색</button>
         </div>
     `;
 
     searchForm.addEventListener('submit', function(e) {
         e.preventDefault();
-        searchQuery = document.getElementById('search-input').value;
+        searchQuery = document.getElementById('search-input').value.trim();
         searchCategory = document.getElementById('search-category').value;
-        currentPage = 1;
+        currentPage = 1; // 검색 시 첫 페이지로 리셋
+        loadProducts(currentPage, searchQuery, searchCategory);
+    });
+
+    const searchInput = document.getElementById('search-input');
+    searchInput.addEventListener('input', function(e) {
+        if (this.value === '') {
+            searchQuery = '';
+            searchCategory = 'all';
+            currentPage = 1;
+            loadProducts(currentPage, searchQuery, searchCategory);
+        }
+    });
+
+    const orderSelect = document.getElementById('order-select');
+    orderSelect.addEventListener('change', function(e) {
+        ordering = this.value;
+        currentPage = 1; // 정렬 변경 시 첫 페이지로 리셋
         loadProducts(currentPage, searchQuery, searchCategory);
     });
 });
 
 function loadProducts(page, search, category) {
-    let url = `${API_BASE_URL}/market/products/?page=${page}`;
+    let url = `${API_BASE_URL}/search/search-product/?page=${page}&ordering=${ordering}`;
     
     if (search) {
         url += `&q=${encodeURIComponent(search)}`;
@@ -43,21 +65,25 @@ function loadProducts(page, search, category) {
         .then(response => response.json())
         .then(data => {
             displayProducts(data.results);
-            displayPagination(data);
-            
-            const searchSummary = document.createElement('div');
-            searchSummary.className = 'alert alert-info';
-            if (search) {
-                const categoryText = category === 'all' ? '전체' : 
-                    category === 'name' ? '상품명' :
-                    category === 'variety' ? '품종' :
-                    category === 'growing_region' ? '재배지역' : '판매자';
-                searchSummary.textContent = `"${search}" 검색 결과 (${categoryText}) - ${data.count}개의 상품`;
-            } else {
-                searchSummary.textContent = `전체 상품 - ${data.count}개`;
+            if (data.count > 0) { // 결과가 있을 때만 페이지네이션 표시
+                displayPagination(data);
             }
-            const productList = document.getElementById('product-list');
-            productList.parentNode.insertBefore(searchSummary, productList);
+            
+            const oldSummary = document.querySelector('.alert.alert-info');
+            if (oldSummary) {
+                oldSummary.remove();
+            }
+            
+            if (search) {
+                const searchSummary = document.createElement('div');
+                searchSummary.className = 'alert alert-info';
+                const categoryText = category === 'all' ? '전체' : 
+                    category === 'name' ? '상품명' : '판매자';
+                searchSummary.textContent = `"${search}" 검색 결과 (${categoryText}) - ${data.count}개의 상품`;
+                
+                const productList = document.getElementById('product-list');
+                productList.parentNode.insertBefore(searchSummary, productList);
+            }
         })
         .catch(error => {
             console.error('Error:', error);
@@ -120,33 +146,37 @@ function displayPagination(data) {
         return;
     }
 
+    const pageList = document.createElement('ul');
+    pageList.className = 'pagination justify-content-center';
+    pagination.appendChild(pageList);
+
     if (data.previous) {
-        addPageButton(pagination, currentPage - 1, '이전');
+        addPageButton(pageList, currentPage - 1, '이전');
     }
 
     let startPage = Math.max(1, currentPage - 2);
     let endPage = Math.min(totalPages, currentPage + 2);
 
     if (startPage > 1) {
-        addPageButton(pagination, 1);
+        addPageButton(pageList, 1);
         if (startPage > 2) {
-            pagination.appendChild(createEllipsis());
+            pageList.appendChild(createEllipsis());
         }
     }
 
     for (let i = startPage; i <= endPage; i++) {
-        addPageButton(pagination, i);
+        addPageButton(pageList, i);
     }
 
     if (endPage < totalPages) {
         if (endPage < totalPages - 1) {
-            pagination.appendChild(createEllipsis());
+            pageList.appendChild(createEllipsis());
         }
-        addPageButton(pagination, totalPages);
+        addPageButton(pageList, totalPages);
     }
 
     if (data.next) {
-        addPageButton(pagination, currentPage + 1, '다음');
+        addPageButton(pageList, currentPage + 1, '다음');
     }
 }
 
@@ -161,7 +191,7 @@ function addPageButton(parent, pageNumber, text = pageNumber) {
     a.addEventListener('click', function(e) {
         e.preventDefault();
         currentPage = pageNumber;
-        loadProducts(currentPage, searchQuery);
+        loadProducts(currentPage, searchQuery, searchCategory);
 
         window.scrollTo({
             top: 0,
@@ -173,4 +203,12 @@ function addPageButton(parent, pageNumber, text = pageNumber) {
     parent.appendChild(li);
 }
 
-document.addEventListener('DOMContentLoaded', fetchProducts);
+function createEllipsis() {
+    const li = document.createElement('li');
+    li.className = 'page-item disabled';
+    const span = document.createElement('span');
+    span.className = 'page-link';
+    span.textContent = '...';
+    li.appendChild(span);
+    return li;
+}

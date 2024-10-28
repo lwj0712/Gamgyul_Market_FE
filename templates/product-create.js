@@ -60,12 +60,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     
-        fetch(`${API_BASE_URL}/market/products/create/`, {
+        fetch(`${API_BASE_URL}/market/products/`, {
             method: 'POST',
             body: formData,
-            credentials: 'include',
             headers: {
-                'X-CSRFToken': getCSRFToken(),
+                'Authorization': `Bearer ${getJWTToken()}`
             }
         })
         .then(response => {
@@ -90,10 +89,8 @@ document.addEventListener('DOMContentLoaded', function() {
             alert(`상품 등록 중 오류가 발생했습니다: ${error.message}`);
         });
     });
-    
-    function getCSRFToken() {
-        return document.cookie.split('; ')
-            .find(row => row.startsWith('csrftoken='))
-            ?.split('=')[1] || '';
-    }
 });
+
+function getJWTToken() {
+    return localStorage.getItem('jwt_token') || '';
+}
