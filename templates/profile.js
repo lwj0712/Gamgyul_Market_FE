@@ -260,27 +260,36 @@ document.addEventListener('DOMContentLoaded', function() {
     function renderPostList(posts) {
         if (!postList) return;
         if (posts && posts.length > 0) {
-            postList.innerHTML = posts.map(post => `
-                <div class="col-sm-6 col-lg-4">
-                    <div class="card h-100">
-                        <div class="position-relative">
-                            <img src="${post.images[0] ? getFullImageUrl(post.images[0]) : DEFAULT_PROFILE_IMAGE}" class="card-img-top" alt="게시물 이미지">
-                        </div>
-                        <div class="card-body">
-                            <h5 class="card-title">${post.content.substring(0, 50)}${post.content.length > 50 ? '...' : ''}</h5>
-                            <p class="small"><i class="bi bi-calendar-event me-2"></i>${new Date(post.created_at).toLocaleDateString()}</p>
-                            <ul class="nav nav-stack py-3 small">
-                                <li class="nav-item">
-                                    <i class="bi bi-heart-fill me-1"></i>${post.likes_count || 0}
-                                </li>
-                                <li class="nav-item ms-sm-auto">
-                                    <i class="bi bi-chat-left-text-fill me-1"></i>${post.comments.length || 0}
-                                </li>
-                            </ul>
+            postList.innerHTML = posts.map(post => {
+                // images 배열이 있는지 확인하고, 없다면 빈 배열로 초기화
+                const images = post.images || [];
+                // 첫 번째 이미지가 있으면 사용하고, 없으면 기본 이미지 사용
+                const imageUrl = images.length > 0 ? getFullImageUrl(images[0]) : DEFAULT_PROFILE_IMAGE;
+                // comments 배열이 있는지 확인
+                const commentsCount = post.comments ? post.comments.length : 0;
+                
+                return `
+                    <div class="col-sm-6 col-lg-4">
+                        <div class="card h-100">
+                            <div class="position-relative">
+                                <img src="${imageUrl}" class="card-img-top" alt="게시물 이미지">
+                            </div>
+                            <div class="card-body">
+                                <h5 class="card-title">${post.content ? post.content.substring(0, 50) + (post.content.length > 50 ? '...' : '') : '내용 없음'}</h5>
+                                <p class="small"><i class="bi bi-calendar-event me-2"></i>${new Date(post.created_at).toLocaleDateString()}</p>
+                                <ul class="nav nav-stack py-3 small">
+                                    <li class="nav-item">
+                                        <i class="bi bi-heart-fill me-1"></i>${post.likes_count || 0}
+                                    </li>
+                                    <li class="nav-item ms-sm-auto">
+                                        <i class="bi bi-chat-left-text-fill me-1"></i>${commentsCount}
+                                    </li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         } else {
             postList.innerHTML = '<p class="col-12">등록된 게시물이 없습니다.</p>';
         }
