@@ -10,28 +10,67 @@ document.addEventListener('DOMContentLoaded', function() {
     const recommendationsPerPage = 5;
     let allRecommendations = []; // 모든 추천 친구를 저장할 배열
 
-    // CSRF 토큰 가져오기
-    function getCSRFToken() {
-        return document.cookie.split('; ')
-            .find(row => row.startsWith('csrftoken='))
-            ?.split('=')[1] || '';
+    // JWT 토큰 관리 함수들
+    function getJWTToken() {
+        return localStorage.getItem('jwt_token');
+    }
+
+    function setJWTToken(token) {
+        localStorage.setItem('jwt_token', token);
+    }
+
+    function removeJWTToken() {
+        localStorage.removeItem('jwt_token');
+    }
+
+    // API 요청에 사용할 기본 헤더
+    function getAuthHeaders() {
+        const token = getJWTToken();
+        return {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        };
+    }
+
+    // API 요청 wrapper 함수
+    async function authenticatedFetch(url, options = {}) {
+        try {
+            const headers = getAuthHeaders();
+            const response = await fetch(url, {
+                ...options,
+                headers: {
+                    ...headers,
+                    ...options.headers
+                }
+            });
+
+            // 토큰이 만료되었거나 유효하지 않은 경우
+            if (response.status === 401) {
+                removeJWTToken();
+                window.location.href = '/templates/login.html';
+                return null;
+            }
+
+            return response;
+        } catch (error) {
+            console.error('API 요청 실패:', error);
+            throw error;
+        }
     }
 
     // 게시물 목록 불러오기
     async function fetchPosts(page = 1) {
         try {
-            const response = await fetch(`http://127.0.0.1:8000/insta/posts/?limit=${postsPerPage}&offset=${(page - 1) * postsPerPage}`, {
-                method: 'GET',
-                credentials: 'include'
-            });
+            const response = await authenticatedFetch(
+                `http://127.0.0.1:8000/posts/?limit=${postsPerPage}&offset=${(page - 1) * postsPerPage}`,
+                { method: 'GET' }
+            );
 
-            if (response.ok) {
+            if (response && response.ok) {
                 const data = await response.json();
                 return data;
-            } else {
-                console.error('게시물 조회 실패:', response.status);
-                return null;
             }
+            return null;
         } catch (error) {
             console.error('게시물 조회 에러 발생:', error);
             return null;
@@ -131,22 +170,20 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 게시물 목록 불러오기 (검색용)
+    // 태그로 게시물 검색
     async function fetchPostsByTags(tags) {
         try {
             const tagParams = tags.map(tag => `tags=${encodeURIComponent(tag)}`).join('&');
-            const response = await fetch(`http://127.0.0.1:8000/insta/posts/search/?${tagParams}`, {
-                method: 'GET',
-                credentials: 'include',
-            });
+            const response = await authenticatedFetch(
+                `http://127.0.0.1:8000/search/search-post/?${tagParams}`,
+                { method: 'GET' }
+            );
 
-            if (response.ok) {
+            if (response && response.ok) {
                 const data = await response.json();
                 return data;
-            } else {
-                console.error('태그로 게시물 조회 실패:', response.status);
-                return null;
             }
+            return null;
         } catch (error) {
             console.error('태그로 게시물 조회 중 에러 발생:', error);
             return null;
@@ -172,21 +209,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // 친구 추천 불러오기
     async function fetchFriendRecommendations() {
         try {
-            const response = await fetch('http://127.0.0.1:8000/accounts/recommend/', {
-                method: 'GET',
-                credentials: 'include',
-                headers: {
-                    'X-CSRFToken': getCSRFToken()
-                }
-            });
+            const response = await authenticatedFetch(
+                'http://127.0.0.1:8000/recommendations/recommend/',
+                { method: 'GET' }
+            );
 
-            if (response.ok) {
+            if (response && response.ok) {
                 const data = await response.json();
                 return data;
-            } else {
-                console.error('친구 추천 조회 실패:', response.status);
-                return null;
             }
+            return null;
         } catch (error) {
             console.error('친구 추천 조회 에러 발생:', error);
             return null;
@@ -201,7 +233,7 @@ document.addEventListener('DOMContentLoaded', function() {
             userElement.classList.add('hstack', 'gap-2', 'mb-3');
             userElement.innerHTML = `
                 <div class="avatar">
-                    <img class="avatar-img rounded-circle" src="${user.profile_image || '/path/to/default/image.jpg'}" alt="${user.username}">
+                    <img class="avatar-img rounded-circle" src="${user.profile_image || '/templates/images/placeholder.jpg'}" alt="${user.username}">
                 </div>
                 <div class="overflow-hidden">
                     <a class="h6 mb-0" href="#!">${user.username}</a>
@@ -215,68 +247,51 @@ document.addEventListener('DOMContentLoaded', function() {
     // 팔로우 기능
     async function followUser(userId) {
         try {
-            const response = await fetch(`http://127.0.0.1:8000/accounts/follow/${userId}/`, {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                    'X-CSRFToken': getCSRFToken()
-                }
-            });
+            const response = await authenticatedFetch(
+                `http://127.0.0.1:8000/follow/follow/${userId}/`,
+                { method: 'POST' }
+            );
 
-            if (response.ok) {
-                return true;
-            } else {
-                console.error('팔로우 실패:', response.status);
-                return false;
-            }
+            return response && response.ok;
         } catch (error) {
             console.error('팔로우 중 오류 발생:', error);
             return false;
         }
     }
 
+    // 좋아요 기능
+    async function likePost(postId) {
+        try {
+            const response = await authenticatedFetch(
+                `http://127.0.0.1:8000/likes/posts/${postId}/like/`,
+                { method: 'POST' }
+            );
+
+            if (response && response.ok) {
+                return await response.json();
+            }
+            return null;
+        } catch (error) {
+            console.error('좋아요 처리 중 오류 발생:', error);
+            return null;
+        }
+    }
+
+    // 이벤트 리스너 설정
     function addEventListeners() {
         // 좋아요 버튼 이벤트
         document.querySelectorAll('.like-button').forEach(button => {
             button.addEventListener('click', async (e) => {
                 e.preventDefault();
                 const postId = e.currentTarget.getAttribute('data-post-id');
-                try {
-                    const response = await fetch(`http://127.0.0.1:8000/insta/posts/${postId}/like/`, {
-                        method: 'POST',
-                        credentials: 'include',
-                        headers: {
-                            'X-CSRFToken': getCSRFToken()
-                        }
-                    });
-                    if (response.ok) {
-                        const responseData = await response.text();
-                        let likeCount;
-                        try {
-                            likeCount = JSON.parse(responseData);
-                        } catch (error) {
-                            console.log('서버 응답:', responseData);
-                            if (responseData === '') {
-                                // 좋아요 취소의 경우, 현재 좋아요 수에서 1을 뺍니다.
-                                const currentLikes = parseInt(e.currentTarget.querySelector('.likes-count').textContent);
-                                likeCount = Math.max(currentLikes - 1, 0);
-                            } else {
-                                console.error('서버 응답을 파싱할 수 없습니다:', responseData);
-                                return;
-                            }
-                        }
-                        const likesCountElement = e.currentTarget.querySelector('.likes-count');
-                        if (likesCountElement) {
-                            likesCountElement.textContent = likeCount;
-                        }
-                        // 좋아요 상태에 따라 버튼 스타일 변경
-                        e.currentTarget.classList.toggle('active', likeCount > parseInt(e.currentTarget.getAttribute('data-likes-count')));
-                        e.currentTarget.setAttribute('data-likes-count', likeCount);
-                    } else {
-                        console.error('좋아요 요청 실패:', response.status);
+                const likeCount = await likePost(postId);
+                
+                if (likeCount !== null) {
+                    const likesCountElement = e.currentTarget.querySelector('.likes-count');
+                    if (likesCountElement) {
+                        likesCountElement.textContent = likeCount;
                     }
-                } catch (error) {
-                    console.error('좋아요 처리 중 오류 발생:', error);
+                    e.currentTarget.classList.toggle('active');
                 }
             });
         });
@@ -286,21 +301,14 @@ document.addEventListener('DOMContentLoaded', function() {
             button.addEventListener('click', async (e) => {
                 e.preventDefault();
                 const userId = e.currentTarget.getAttribute('data-user-id');
-                try {
-                    const success = await followUser(userId);
-                    if (success) {
-                        const followBtn = e.currentTarget;
-                        if (followBtn) {
-                            followBtn.innerHTML = '<i class="fa-solid fa-check"> </i>';
-                            followBtn.classList.remove('btn-primary-soft');
-                            followBtn.classList.add('btn-success');
-                            followBtn.disabled = true;
-                        } else {
-                            console.error('팔로우 버튼을 찾을 수 없습니다.');
-                        }
-                    }
-                } catch (error) {
-                    console.error('팔로우 처리 중 오류 발생:', error);
+                const success = await followUser(userId);
+                
+                if (success) {
+                    const followBtn = e.currentTarget;
+                    followBtn.innerHTML = '<i class="fa-solid fa-check"> </i>';
+                    followBtn.classList.remove('btn-primary-soft');
+                    followBtn.classList.add('btn-success');
+                    followBtn.disabled = true;
                 }
             });
         });
@@ -325,6 +333,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 초기 로드
     async function init() {
+        // JWT 토큰이 없으면 로그인 페이지로 리다이렉트
+        if (!getJWTToken()) {
+            window.location.href = '/login.html';
+            return;
+        }
+
         const initialPosts = await fetchPosts(); // 모든 게시물 가져오기
         if (initialPosts && initialPosts.results) {
             displayPosts(initialPosts.results);
