@@ -90,13 +90,16 @@ function showErrorMessage(message) {
 // Chat Functions
 async function getChatRooms() {
     try {
-        const response = await fetchWithCSRF(`${API_BASE_URL}/chats/`);
+        const response = await fetchWithAuth(`${API_BASE_URL}/chats/chatrooms/`);
         console.log('Chat rooms response:', response);
-        if (response && Array.isArray(response.results)) {
-            displayChatRooms(response.results);
-        } else if (Array.isArray(response)) {
-            displayChatRooms(response);
+        
+        // response.results가 있으면 사용하고, 없으면 response 자체가 배열인지 확인
+        const chatRooms = response.results || response;
+        
+        if (Array.isArray(chatRooms)) {
+            displayChatRooms(chatRooms);
         } else {
+            console.error('Unexpected response format:', response);
             throw new Error('Invalid response format for chat rooms');
         }
     } catch (error) {
@@ -148,31 +151,28 @@ async function openChatRoom(roomId) {
         
         chatWindow.style.display = 'block';
 
-        const response = await fetchWithCSRF(`${API_BASE_URL}/chat/${roomId}/messages/`);
+        const response = await fetchWithAuth(`${API_BASE_URL}/chats/chatrooms/${roomId}/messages/`);
         console.log('Messages response:', response);
 
-        let messages;
-        if (response.results && Array.isArray(response.results)) {
-            messages = response.results;
-        } else if (Array.isArray(response)) {
-            messages = response;
+        // response.results가 있으면 사용하고, 없으면 response 자체가 배열인지 확인
+        const messages = response.results || response;
+        
+        if (Array.isArray(messages)) {
+            messages.forEach(message => {
+                console.log('Message:', message);
+                addMessage({
+                    id: message.id,
+                    content: message.content,
+                    sender: message.sender,
+                    image: message.image,
+                    sent_at: message.sent_at,
+                    is_read: message.is_read
+                });
+            });
         } else {
             console.error('Unexpected response format:', response);
-            throw new Error('Unexpected response format');
+            throw new Error('Unexpected message format');
         }
-
-        console.log('Number of messages:', messages.length);
-        messages.forEach((message, index) => {
-            console.log(`Message ${index + 1}:`, message);
-            addMessage({
-                id: message.id,
-                content: message.content,
-                sender: message.sender,
-                image: message.image,
-                sent_at: message.sent_at,
-                is_read: message.is_read
-            });
-        });
         
         setupChatWebSocket(roomId);
         currentRoomId = roomId;
@@ -269,14 +269,17 @@ async function sendMessage(content) {
 
     try {
         console.log('Sending message:', content);
-        const response = await fetchWithCSRF(`${API_BASE_URL}/chat/${currentRoomId}/messages/send/`, 'POST', { content });
+        const response = await fetchWithAuth(
+            `${API_BASE_URL}/chats/chatrooms/${currentRoomId}/messages/`,
+            'POST',
+            { content }
+        );
         
         console.log('Server response:', response);
 
         if (response && response.id) {
             document.getElementById('message-input').value = '';
-            // 현재 사용자 정보를 가져와서 sender로 사용
-            const currentUser = await fetchCurrentUserInfo();
+            const currentUser = getCurrentUser();
             addMessage({
                 id: response.id,
                 content: content,
@@ -354,7 +357,11 @@ function displaySearchResults(results) {
 
 async function startChatWithUser(user) {
     try {
-        const newChatRoom = await fetchWithCSRF(`${API_BASE_URL}/chat/create/`, 'POST', { participants: [user.username] });
+        const newChatRoom = await fetchWithAuth(
+            `${API_BASE_URL}/chats/chatrooms/`,
+            'POST',
+            { participants: [user.username] }
+        );
         if (newChatRoom && newChatRoom.id) {
             openChatRoom(newChatRoom.id);
             document.getElementById('searchResults').style.display = 'none';
@@ -373,7 +380,7 @@ async function handleMessageSearch() {
     const query = document.getElementById('messageSearchInput').value.trim();
     if (query && currentRoomId) {
         try {
-            const response = await fetchWithCSRF(`${API_BASE_URL}/chat/${currentRoomId}/messages/search/?q=${encodeURIComponent(query)}`);
+            const response = await fetchWithCSRF(`${API_BASE_URL}/chats/${currentRoomId}/messages/search/?q=${encodeURIComponent(query)}`);
             if (response && (Array.isArray(response.results) || Array.isArray(response))) {
                 displayMessageSearchResults(Array.isArray(response) ? response : response.results);
             } else if (response && response.message) {
