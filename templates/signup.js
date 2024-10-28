@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('회원가입에 성공했습니다!');
             
             // 메인 페이지로 리다이렉트
-            window.location.href = '/index.html';
+            window.location.href = '/templates/index.html';
         } catch (error) {
             console.error('회원가입 오류:', error);
             errorMessage.textContent = error.message || '회원가입 중 오류가 발생했습니다.';
