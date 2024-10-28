@@ -10,43 +10,84 @@ document.addEventListener('DOMContentLoaded', function() {
     const recommendationsPerPage = 5;
     let allRecommendations = []; // 모든 추천 친구를 저장할 배열
 
-    // CSRF 토큰 가져오기
-    function getCSRFToken() {
-        return document.cookie.split('; ')
-            .find(row => row.startsWith('csrftoken='))
-            ?.split('=')[1] || '';
+    // JWT 토큰 관리 함수들
+    function getJWTToken() {
+        return localStorage.getItem('jwt_token');
+    }
+
+    function setJWTToken(token) {
+        localStorage.setItem('jwt_token', token);
+    }
+
+    function removeJWTToken() {
+        localStorage.removeItem('jwt_token');
+    }
+
+    // API 요청에 사용할 기본 헤더
+    function getAuthHeaders() {
+        const token = getJWTToken();
+        return {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        };
+    }
+
+    // API 요청 wrapper 함수
+    async function authenticatedFetch(url, options = {}) {
+        try {
+            const headers = getAuthHeaders();
+            const response = await fetch(url, {
+                ...options,
+                headers: {
+                    ...headers,
+                    ...options.headers
+                }
+            });
+
+            // 토큰이 만료되었거나 유효하지 않은 경우
+            if (response.status === 401) {
+                removeJWTToken();
+                window.location.href = '/templates/login.html';
+                return null;
+            }
+
+            return response;
+        } catch (error) {
+            console.error('API 요청 실패:', error);
+            throw error;
+        }
     }
 
     // 게시물 목록 불러오기
     async function fetchPosts(page = 1) {
         try {
-            const response = await fetch(`http://127.0.0.1:8000/insta/posts/?limit=${postsPerPage}&offset=${(page - 1) * postsPerPage}`, {
-                method: 'GET',
-                credentials: 'include'
-            });
+            const response = await authenticatedFetch(
+                `http://127.0.0.1:8000/posts/posts/?limit=${postsPerPage}&offset=${(page - 1) * postsPerPage}`,
+                { method: 'GET' }
+            );
 
-            if (response.ok) {
+            if (response && response.ok) {
                 const data = await response.json();
                 return data;
-            } else {
-                console.error('게시물 조회 실패:', response.status);
-                return null;
             }
+            return null;
         } catch (error) {
             console.error('게시물 조회 에러 발생:', error);
             return null;
         }
     }
 
-    // 게시물 표시 함수
+    // 게시물 표시 함수 수정
     function displayPosts(posts) {
         console.log(posts);
 
-        posts.forEach(post => {
+        posts.forEach(async post => {  // async 추가
             const postElement = document.createElement('div');
             postElement.classList.add('card');
             
-            console.log(post.tags);
+            // 댓글 수를 가져오는 API 호출
+            const comments = await fetchComments(post.id);
+            const commentsCount = comments ? comments.length : 0;
 
             postElement.innerHTML = `
                 <div class="card-header border-0 pb-0">
@@ -55,7 +96,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <!-- Avatar -->
                             <div class="avatar avatar-story me-2">
                                 <a href="#!">
-                                    <img class="avatar-img rounded-circle" src="${post.user.profile_image || '/path/to/default/image.jpg'}" alt="${post.user.username}">
+                                    <img class="avatar-img rounded-circle" src="${post.user.profile_image || '/templates/images/placeholder.jpg'}" alt="${post.user.username}">
                                 </a>
                             </div>
                             <!-- Info -->
@@ -73,14 +114,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="card-body post-detail-link" data-post-id="${post.id}">
                     <p>${post.content}</p>
                     <div>
-                        <img src="${post.images[0] ? `${API_BASE_URL}${post.images[0]}` : '/path/to/default/image.jpg'}" class="card-img-top" alt="Post image">
+                        <img src="${post.images[0] ? `${API_BASE_URL}${post.images[0]}` : '/templates/images/placeholder.jpg'}" class="card-img-top" alt="Post image">
                     </div>
                 </div>
                 <!-- Card feed action START -->
                 <!-- 태그 표시 부분 -->
-                ${post.tags && post.tags.length > 0 ? `
+                ${post.tags ? `
                     <ul class="nav nav-stack py-3 small ms-4">
-                        ${JSON.parse(post.tags)
+                        ${parseTags(post.tags)
                             .map(tag => `
                                 <li class="nav-item d-flex justify-content-between">
                                     <span class="badge bg-primary me-1">${tag.trim()}</span>
@@ -95,7 +136,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link comment-button" href="#!" data-post-id="${post.id}"> <i class="bi bi-chat-fill pe-1"></i>댓글 (${post.comments.length})
+                        <a class="nav-link comment-button" href="#!" data-post-id="${post.id}">
+                            <i class="bi bi-chat-fill pe-1"></i>댓글 (${commentsCount})
                         </a>
                     </li>
                 </ul>
@@ -104,11 +146,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="card-footer border-0 pt-0">
                     <!-- Comment wrap START -->
                     <ul class="comment-wrap list-unstyled">
-                        ${post.comments.map(comment => `
+                        ${comments ? comments.slice(0, 2).map(comment => `
                             <li class="comment-item">
                                 <div class="d-flex">
                                     <div class="avatar avatar-xs">
-                                        <img class="avatar-img rounded-circle" src="${comment.user.profile_image || '/path/to/default/image.jpg'}" alt="${comment.user.username}">
+                                        <img class="avatar-img rounded-circle" src="${comment.user.profile_image || '/templates/images/placeholder.jpg'}" alt="${comment.user.username}">
                                     </div>
                                     <div class="ms-2">
                                         <div class="bg-light rounded-start-top-0 p-3 rounded">
@@ -121,7 +163,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </div>
                                 </div>
                             </li>
-                        `).join('')}
+                        `).join('') : ''}
                     </ul>
                     <!-- Comment wrap END -->
                 </div>
@@ -129,24 +171,36 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
             postList.appendChild(postElement);
         });
+
+        addEventListeners();
     }
 
-    // 게시물 목록 불러오기 (검색용)
+    // 태그 처리 함수
+    function parseTags(tags) {
+        if (!tags) return [];
+        if (Array.isArray(tags)) return tags;
+        try {
+            return JSON.parse(tags);
+        } catch (error) {
+            console.error('태그 파싱 중 오류 발생:', error);
+            return [];
+        }
+    }
+
+    // 태그로 게시물 검색
     async function fetchPostsByTags(tags) {
         try {
             const tagParams = tags.map(tag => `tags=${encodeURIComponent(tag)}`).join('&');
-            const response = await fetch(`http://127.0.0.1:8000/insta/posts/search/?${tagParams}`, {
-                method: 'GET',
-                credentials: 'include',
-            });
+            const response = await authenticatedFetch(
+                `http://127.0.0.1:8000/search/search-post/?${tagParams}`,
+                { method: 'GET' }
+            );
 
-            if (response.ok) {
+            if (response && response.ok) {
                 const data = await response.json();
                 return data;
-            } else {
-                console.error('태그로 게시물 조회 실패:', response.status);
-                return null;
             }
+            return null;
         } catch (error) {
             console.error('태그로 게시물 조회 중 에러 발생:', error);
             return null;
@@ -172,21 +226,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // 친구 추천 불러오기
     async function fetchFriendRecommendations() {
         try {
-            const response = await fetch('http://127.0.0.1:8000/accounts/recommend/', {
-                method: 'GET',
-                credentials: 'include',
-                headers: {
-                    'X-CSRFToken': getCSRFToken()
-                }
-            });
+            const response = await authenticatedFetch(
+                'http://127.0.0.1:8000/recommendations/recommend/',
+                { method: 'GET' }
+            );
 
-            if (response.ok) {
+            if (response && response.ok) {
                 const data = await response.json();
                 return data;
-            } else {
-                console.error('친구 추천 조회 실패:', response.status);
-                return null;
             }
+            return null;
         } catch (error) {
             console.error('친구 추천 조회 에러 발생:', error);
             return null;
@@ -201,7 +250,7 @@ document.addEventListener('DOMContentLoaded', function() {
             userElement.classList.add('hstack', 'gap-2', 'mb-3');
             userElement.innerHTML = `
                 <div class="avatar">
-                    <img class="avatar-img rounded-circle" src="${user.profile_image || '/path/to/default/image.jpg'}" alt="${user.username}">
+                    <img class="avatar-img rounded-circle" src="${user.profile_image || '/templates/images/placeholder.jpg'}" alt="${user.username}">
                 </div>
                 <div class="overflow-hidden">
                     <a class="h6 mb-0" href="#!">${user.username}</a>
@@ -212,71 +261,74 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // 댓글 목록 조회 함수 추가
+    async function fetchComments(postId) {
+        try {
+            const response = await authenticatedFetch(
+                `${API_BASE_URL}/comments/posts/${postId}/comments/`,
+                { method: 'GET' }
+            );
+
+            if (response && response.ok) {
+                const data = await response.json();
+                return data;
+            }
+            return null;
+        } catch (error) {
+            console.error('댓글 조회 중 오류 발생:', error);
+            return null;
+        }
+    }
+
     // 팔로우 기능
     async function followUser(userId) {
         try {
-            const response = await fetch(`http://127.0.0.1:8000/accounts/follow/${userId}/`, {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                    'X-CSRFToken': getCSRFToken()
-                }
-            });
+            const response = await authenticatedFetch(
+                `http://127.0.0.1:8000/follow/follow/${userId}/`,
+                { method: 'POST' }
+            );
 
-            if (response.ok) {
-                return true;
-            } else {
-                console.error('팔로우 실패:', response.status);
-                return false;
-            }
+            return response && response.ok;
         } catch (error) {
             console.error('팔로우 중 오류 발생:', error);
             return false;
         }
     }
 
+    // 좋아요 기능
+    async function likePost(postId) {
+        try {
+            const response = await authenticatedFetch(
+                `${API_BASE_URL}/likes/posts/${postId}/like/`,
+                { method: 'POST' }
+            );
+
+            if (response && response.ok) {
+                // 응답이 숫자(좋아요 수)를 반환
+                return await response.json();
+            }
+            return null;
+        } catch (error) {
+            console.error('좋아요 처리 중 오류 발생:', error);
+            return null;
+        }
+    }
+
+    // 이벤트 리스너 설정
     function addEventListeners() {
         // 좋아요 버튼 이벤트
         document.querySelectorAll('.like-button').forEach(button => {
             button.addEventListener('click', async (e) => {
                 e.preventDefault();
                 const postId = e.currentTarget.getAttribute('data-post-id');
-                try {
-                    const response = await fetch(`http://127.0.0.1:8000/insta/posts/${postId}/like/`, {
-                        method: 'POST',
-                        credentials: 'include',
-                        headers: {
-                            'X-CSRFToken': getCSRFToken()
-                        }
-                    });
-                    if (response.ok) {
-                        const responseData = await response.text();
-                        let likeCount;
-                        try {
-                            likeCount = JSON.parse(responseData);
-                        } catch (error) {
-                            console.log('서버 응답:', responseData);
-                            if (responseData === '') {
-                                // 좋아요 취소의 경우, 현재 좋아요 수에서 1을 뺍니다.
-                                const currentLikes = parseInt(e.currentTarget.querySelector('.likes-count').textContent);
-                                likeCount = Math.max(currentLikes - 1, 0);
-                            } else {
-                                console.error('서버 응답을 파싱할 수 없습니다:', responseData);
-                                return;
-                            }
-                        }
-                        const likesCountElement = e.currentTarget.querySelector('.likes-count');
-                        if (likesCountElement) {
-                            likesCountElement.textContent = likeCount;
-                        }
-                        // 좋아요 상태에 따라 버튼 스타일 변경
-                        e.currentTarget.classList.toggle('active', likeCount > parseInt(e.currentTarget.getAttribute('data-likes-count')));
-                        e.currentTarget.setAttribute('data-likes-count', likeCount);
-                    } else {
-                        console.error('좋아요 요청 실패:', response.status);
+                const likeCount = await likePost(postId);
+                
+                if (likeCount !== null) {
+                    const likesCountElement = e.currentTarget.querySelector('.likes-count');
+                    if (likesCountElement) {
+                        likesCountElement.textContent = likeCount;
                     }
-                } catch (error) {
-                    console.error('좋아요 처리 중 오류 발생:', error);
+                    e.currentTarget.classList.toggle('active');
                 }
             });
         });
@@ -286,21 +338,14 @@ document.addEventListener('DOMContentLoaded', function() {
             button.addEventListener('click', async (e) => {
                 e.preventDefault();
                 const userId = e.currentTarget.getAttribute('data-user-id');
-                try {
-                    const success = await followUser(userId);
-                    if (success) {
-                        const followBtn = e.currentTarget;
-                        if (followBtn) {
-                            followBtn.innerHTML = '<i class="fa-solid fa-check"> </i>';
-                            followBtn.classList.remove('btn-primary-soft');
-                            followBtn.classList.add('btn-success');
-                            followBtn.disabled = true;
-                        } else {
-                            console.error('팔로우 버튼을 찾을 수 없습니다.');
-                        }
-                    }
-                } catch (error) {
-                    console.error('팔로우 처리 중 오류 발생:', error);
+                const success = await followUser(userId);
+                
+                if (success) {
+                    const followBtn = e.currentTarget;
+                    followBtn.innerHTML = '<i class="fa-solid fa-check"> </i>';
+                    followBtn.classList.remove('btn-primary-soft');
+                    followBtn.classList.add('btn-success');
+                    followBtn.disabled = true;
                 }
             });
         });
@@ -323,8 +368,32 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // 이벤트 리스너
+    document.querySelectorAll('.like-button').forEach(button => {
+        button.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const postId = e.currentTarget.getAttribute('data-post-id');
+            const likesCount = await likePost(postId);
+            
+            if (likesCount !== null) {
+                const likesCountElement = e.currentTarget.querySelector('.likes-count');
+                if (likesCountElement) {
+                    likesCountElement.textContent = likesCount;
+                }
+                e.currentTarget.classList.toggle('active');
+            }
+        });
+    });
+
+
     // 초기 로드
     async function init() {
+        // JWT 토큰이 없으면 로그인 페이지로 리다이렉트
+        if (!getJWTToken()) {
+            window.location.href = '/login.html';
+            return;
+        }
+
         const initialPosts = await fetchPosts(); // 모든 게시물 가져오기
         if (initialPosts && initialPosts.results) {
             displayPosts(initialPosts.results);

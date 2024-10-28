@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Google Login Callback</title>
+</head>
+<body>
+    <p>로그인 처리중...</p>
+    <script>
+        async function handleGoogleCallback() {
+            try {
+                const fragment = new URLSearchParams(window.location.hash.slice(1));
+                const accessToken = fragment.get('access_token');
+                
+                console.log('Google Access Token:', accessToken);
+        
+                if (!accessToken) {
+                    alert('Google 로그인에 실패했습니다.');
+                    window.location.href = '/templates/login.html';
+                    return;
+                }
+
+                console.log('Sending request to server...');
+                const response = await fetch('http://127.0.0.1:8000/accounts/google/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        access_token: accessToken
+                    })
+                });
+
+                console.log('Server Response Status:', response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Error response:', errorText);
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('Server Response Data:', data);
+
+                // 응답 구조 확인
+                let jwtToken = null;
+                if (data.access) {
+                    jwtToken = data.access;
+                    console.log('Found token in data.access');
+                } else if (data.token) {
+                    jwtToken = data.token;
+                    console.log('Found token in data.token');
+                } else if (data.key) {
+                    jwtToken = data.key;
+                    console.log('Found token in data.key');
+                } else {
+                    console.error('Response data structure:', data);
+                    throw new Error('JWT 토큰을 찾을 수 없습니다.');
+                }
+
+                console.log('JWT Token:', jwtToken);
+                localStorage.setItem('jwt_token', jwtToken);
+
+                // 사용자 정보 요청
+                const userResponse = await fetch('http://127.0.0.1:8000/accounts/current-user/', {
+                    headers: {
+                        'Authorization': `Bearer ${jwtToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!userResponse.ok) {
+                    console.error('User Response Status:', userResponse.status);
+                    const userErrorText = await userResponse.text();
+                    console.error('User Error Response:', userErrorText);
+                    throw new Error('사용자 정보를 가져오는데 실패했습니다.');
+                }
+
+                const userData = await userResponse.json();
+                console.log('User Data:', userData);
+                
+                localStorage.setItem('user', JSON.stringify(userData));
+                window.location.href = '/templates/index.html';
+
+            } catch (error) {
+                console.error('Error:', error);
+                document.body.innerHTML += `
+                    <div style="color: red; margin: 20px;">
+                        <p>Error: ${error.message}</p>
+                        <p>Stack: ${error.stack}</p>
+                    </div>
+                `;
+            }
+        }
+
+        handleGoogleCallback();
+    </script>
+</body>
+</html>
