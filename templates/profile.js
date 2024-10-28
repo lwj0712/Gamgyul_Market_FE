@@ -64,13 +64,25 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // updateProfileUI에서 사용
     function updateProfileUI(profileData) {
         if (profileImage) profileImage.src = getFullImageUrl(profileData.profile_image);
         if (usernameElement) usernameElement.textContent = profileData.username;
         if (bioElement) bioElement.textContent = profileData.bio || '소개가 없습니다.';
         if (followersCountElement) followersCountElement.textContent = profileData.followers_count || 0;
         if (followingCountElement) followingCountElement.textContent = profileData.following_count || 0;
-    
+
+        // 메인 팔로우 버튼 설정
+        if (followBtn) {
+            if (!profileData.is_self) {
+                followBtn.style.display = 'inline';
+                // 통일된 함수 사용
+                updateFollowButton(followBtn, profileData.is_following, profileData.id);
+            } else {
+                followBtn.style.display = 'none';
+            }
+        }
+
         updateEmailDisplay(profileData);
         renderFollowersList(profileData.followers || []);
         renderFollowingList(profileData.following || []);
@@ -98,7 +110,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (editProfileBtn) editProfileBtn.style.display = 'inline';
             if (profileSettingsBtn) profileSettingsBtn.style.display = 'inline';
         } else {
-            if (followBtn) followBtn.style.display = 'inline';
             if (editProfileBtn) editProfileBtn.style.display = 'none';
             if (profileSettingsBtn) profileSettingsBtn.style.display = 'none';
         }
@@ -163,6 +174,88 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
     }
 
+    // handleFollow에서 사용
+    async function handleFollow(event) {
+        try {
+            const userId = event.target.getAttribute('data-user-uuid');
+            if (!userId) {
+                throw new Error('사용자 ID를 찾을 수 없습니다.');
+            }
+
+            const response = await fetchWithAuth(`${API_BASE_URL}/follow/follow/${userId}/`, 'POST');
+
+            if (response.ok) {
+                const data = await response.json();
+                // 통일된 함수 사용
+                updateFollowButton(event.target, true);
+                if (followersCountElement) {
+                    followersCountElement.textContent = data.followers_count || 0;
+                }
+                if (followingCountElement) {
+                    followingCountElement.textContent = data.following_count || 0;
+                }
+            } else {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || '팔로우 실패');
+            }
+            loadProfile();
+        } catch (error) {
+            console.error('팔로우 중 오류 발생:', error);
+            showErrorMessage('팔로우 처리 중 오류가 발생했습니다.');
+        }
+    }
+
+    // handleUnfollow에서 사용
+    async function handleUnfollow(event) {
+        try {
+            const userId = event.target.getAttribute('data-user-uuid');
+            if (!userId) {
+                throw new Error('사용자 ID를 찾을 수 없습니다.');
+            }
+
+            const response = await fetchWithAuth(`${API_BASE_URL}/follow/unfollow/${userId}/`, 'DELETE');
+
+            if (response.ok) {
+                const data = await response.json();
+                // 통일된 함수 사용
+                updateFollowButton(event.target, false);
+                if (followersCountElement) {
+                    followersCountElement.textContent = data.followers_count || 0;
+                }
+                if (followingCountElement) {
+                    followingCountElement.textContent = data.following_count || 0;
+                }
+                loadProfile();
+            } else {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || '언팔로우 실패');
+            }
+        } catch (error) {
+            console.error('언팔로우 중 오류 발생:', error);
+            showErrorMessage('언팔로우 처리 중 오류가 발생했습니다.');
+        }
+    }
+
+    // 통일된 버튼 업데이트 함수
+    function updateFollowButton(button, isFollowing, userId = null) {
+        if (!button) return;
+
+        // userId가 제공된 경우에만 설정
+        if (userId) {
+            button.setAttribute('data-user-uuid', userId);
+        }
+
+        if (isFollowing) {
+            button.textContent = '언팔로우';
+            button.classList.remove('btn-primary', 'follow-btn', 'btn-success-soft');
+            button.classList.add('btn-danger-soft', 'unfollow-btn');
+        } else {
+            button.textContent = '팔로우';
+            button.classList.remove('btn-danger-soft', 'unfollow-btn');
+            button.classList.add('btn-primary', 'follow-btn', 'btn-success-soft');
+        }
+    }
+
     // Post and Product Functions
     function renderPostList(posts) {
         if (!postList) return;
@@ -221,58 +314,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Follow/Unfollow 함수도 id 사용하도록 수정
-    async function handleFollow(userId) {
-        try {
-            const response = await fetchWithAuth(`${API_BASE_URL}/follow/follow/${userId}/`, 'POST');
-            if (response.ok) {
-                loadProfile();
-            } else {
-                throw new Error('팔로우 실패');
-            }
-        } catch (error) {
-            console.error('팔로우 중 오류 발생:', error);
-            showErrorMessage('팔로우 처리 중 오류가 발생했습니다.');
-        }
-    }
-
-    async function handleFollowUnfollow(event) {
-        if (!event.target.classList.contains('follow-btn') && !event.target.classList.contains('unfollow-btn')) return;
-        
-        const targetId = event.target.getAttribute('data-user-uuid'); // 여기서는 속성명은 uuid로 두되 값은 id를 사용
-        const isFollowing = event.target.classList.contains('unfollow-btn');
-        const url = `${API_BASE_URL}/follow/${isFollowing ? 'unfollow' : 'follow'}/${targetId}/`;
-    
-        try {
-            const response = await fetchWithAuth(url, isFollowing ? 'DELETE' : 'POST');
-            if (response.ok) {
-                const data = await response.json();
-                updateFollowButton(event.target, !isFollowing);
-                if (followingCountElement) {
-                    followingCountElement.textContent = data.following_count;
-                }
-                loadProfile();
-            } else {
-                throw new Error(isFollowing ? '언팔로우 실패' : '팔로우 실패');
-            }
-        } catch (error) {
-            console.error(`${isFollowing ? '언팔로우' : '팔로우'} 중 오류 발생:`, error);
-            showErrorMessage(`${isFollowing ? '언팔로우' : '팔로우'} 처리 중 오류가 발생했습니다.`);
-        }
-    }
-
-    function updateFollowButton(button, isCurrentlyFollowing) {
-        if (isCurrentlyFollowing) {
-            button.textContent = '언팔로우';
-            button.classList.remove('follow-btn', 'btn-success-soft');
-            button.classList.add('unfollow-btn', 'btn-danger-soft');
-        } else {
-            button.textContent = '팔로우';
-            button.classList.remove('unfollow-btn', 'btn-danger-soft');
-            button.classList.add('follow-btn', 'btn-success-soft');
-        }
-    }
-
     // Search Functions
     async function searchUsers(query) {
         try {
@@ -324,14 +365,15 @@ document.addEventListener('DOMContentLoaded', function() {
         searchResults.style.display = 'block';
     }
 
-    // Event Listeners
     function addEventListeners() {
+        // 프로필 편집 버튼
         if (editProfileBtn) {
             editProfileBtn.addEventListener('click', () => {
                 window.location.href = '/templates/edit-profile.html';
             });
         }
-
+    
+        // 프로필 설정 버튼
         if (profileSettingsBtn) {
             profileSettingsBtn.addEventListener('click', () => {
                 const currentUser = getCurrentUser();
@@ -340,15 +382,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         }
-
-        if (followBtn) {
-            followBtn.addEventListener('click', handleFollow);
-        }
-
-        document.addEventListener('click', function(event) {
-            handleFollowUnfollow(event);
-        });
-
+    
+        // 검색 입력 이벤트
         if (searchInput) {
             let debounceTimer;
             searchInput.addEventListener('input', function() {
@@ -365,22 +400,34 @@ document.addEventListener('DOMContentLoaded', function() {
                 }, 300);
             });
         }
-
+    
+        // 검색 결과 외부 클릭 시 숨기기
         document.addEventListener('click', function(event) {
             if (searchResults && !searchResults.contains(event.target) && event.target !== searchInput) {
                 searchResults.style.display = 'none';
             }
         });
-
+    
+        // 더보기 버튼들
         const showMoreFollowersBtn = document.getElementById('show-more-followers');
         const showMoreFollowingBtn = document.getElementById('show-more-following');
-
+    
         if (showMoreFollowersBtn) {
             showMoreFollowersBtn.addEventListener('click', () => updateFollowersList(true));
         }
         if (showMoreFollowingBtn) {
             showMoreFollowingBtn.addEventListener('click', () => updateFollowingList(true));
         }
+    
+        // 팔로우/언팔로우 버튼 이벤트 위임 (한 곳에서만 처리)
+        document.addEventListener('click', function(event) {
+            const button = event.target;
+            if (button.classList.contains('follow-btn')) {
+                handleFollow(event);
+            } else if (button.classList.contains('unfollow-btn')) {
+                handleUnfollow(event);
+            }
+        });
     }
 
     // Initialize
