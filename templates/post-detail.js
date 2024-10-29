@@ -66,6 +66,12 @@
                 const data = await response.json();
                 displayPostDetail(data);
                 
+                // 현재 사용자가 게시물 작성자인지 확인
+                const currentUserId = getCurrentUserId();
+                if (currentUserId && data.user.id === currentUserId) {
+                    document.getElementById('post-actions').style.display = 'block';
+                }
+                
                 // 댓글 별도 조회
                 const comments = await fetchComments(postId);
                 if (comments) {
@@ -74,6 +80,30 @@
             } catch (error) {
                 console.error('게시물 조회 중 오류 발생:', error);
                 alert('게시물 데이터를 로드하는 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 게시물 삭제 함수 추가
+        async function handleDeletePost() {
+            if (!confirm('정말로 이 게시물을 삭제하시겠습니까?')) {
+                return;
+            }
+
+            try {
+                const response = await authenticatedFetch(
+                    `${API_BASE_URL}/posts/posts/${postId}/`,
+                    { method: 'DELETE' }
+                );
+                
+                if (response && response.status === 204) {
+                    alert('게시물이 삭제되었습니다.');
+                    window.location.href = '/templates/index.html';
+                } else {
+                    throw new Error('삭제 실패');
+                }
+            } catch (error) {
+                console.error('게시물 삭제 중 오류 발생:', error);
+                alert('게시물 삭제에 실패했습니다.');
             }
         }
 
@@ -135,9 +165,12 @@
         function displayComments(comments) {
             const commentsList = document.getElementById('comments-list');
             commentsList.innerHTML = '';
-            const currentUserId = getCurrentUserId(); // JWT 토큰에서 추출한 사용자 ID
-            
-            comments.forEach(comment => {
+            const currentUserId = getCurrentUserId();
+
+            // 최상위 댓글만 필터링 (parent_comment가 없는 댓글)
+            const topLevelComments = comments.filter(comment => !comment.parent_comment);
+
+            topLevelComments.forEach(comment => {
                 const li = document.createElement('li');
                 li.className = 'comment-item mb-3';
                 li.innerHTML = `
@@ -237,13 +270,27 @@
         // 댓글 작성
         async function handleCommentSubmit(event) {
             event.preventDefault();
+            
             const commentInput = document.getElementById('comment-input');
+            const urlParams = new URLSearchParams(window.location.search);
+            const postId = urlParams.get('postId');
+        
+            if (!commentInput) {
+                console.error('댓글 입력 요소를 찾을 수 없습니다.');
+                alert('죄송합니다. 댓글을 제출할 수 없습니다. 페이지를 새로고침한 후 다시 시도해 주세요.');
+                return;
+            }
+        
             const content = commentInput.value.trim();
-            if (!content) return;
-
+            
+            if (!content) {
+                alert('댓글 내용을 입력해주세요.');
+                return;
+            }
+            
             try {
                 const response = await authenticatedFetch(
-                    `${API_BASE_URL}/posts/${postId}/comments/`,
+                    `${API_BASE_URL}/comments/posts/${postId}/comments/`,
                     {
                         method: 'POST',
                         body: JSON.stringify({ content })
@@ -257,8 +304,26 @@
                     commentInput.value = '';
                 }
             } catch (error) {
-                console.error('댓글 작성 중 오류 발생:', error);
+                console.error('댓글 제출 중 오류 발생:', error);
+                alert('댓글 제출에 실패했습니다: ' + error.message);
             }
+        }
+        
+        function addCommentToList(comment) {
+            const commentsList = document.getElementById('comments-list');
+            const li = document.createElement('li');
+            li.className = 'mb-2';
+            
+            li.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <img src="${comment.user.profile_image || DEFAULT_PROFILE_IMAGE}" alt="${comment.user.username}" class="rounded-circle me-2" width="32" height="32">
+                    <strong>${comment.user.username}</strong>
+                </div>
+                <p class="mb-1">${comment.content}</p>
+                <small class="text-muted">${new Date(comment.created_at).toLocaleString()}</small>
+            `;
+            
+            commentsList.appendChild(li);
         }
 
         // 대댓글 작성
@@ -268,10 +333,10 @@
             const content = replyInput.value.trim();
             const commentId = event.target.dataset.commentId;
             if (!content) return;
-
+    
             try {
                 const response = await authenticatedFetch(
-                    `${API_BASE_URL}/posts/${postId}/comments/`,
+                    `${API_BASE_URL}/comments/posts/${postId}/comments/`,
                     {
                         method: 'POST',
                         body: JSON.stringify({
@@ -286,9 +351,19 @@
                 if (comments) {
                     displayComments(comments);
                     replyInput.value = '';
+                    // 답글 폼 닫기
+                    const repliesDiv = document.getElementById(`replies-${commentId}`);
+                    const existingForm = repliesDiv.querySelector('.reply-form');
+                    if (existingForm) {
+                        existingForm.remove();
+                    }
                 }
             } catch (error) {
                 console.error('대댓글 작성 중 오류 발생:', error);
+                if (error.response) {
+                    const errorData = await error.response.json();
+                    alert(errorData.detail || '대댓글 작성에 실패했습니다.');
+                }
             }
         }
 
@@ -296,7 +371,7 @@
         async function deleteComment(commentId) {
             try {
                 const response = await authenticatedFetch(
-                    `${API_BASE_URL}/posts/${postId}/comments/${commentId}/`,
+                    `${API_BASE_URL}/comments/posts/${postId}/comments/${commentId}/`,
                     {
                         method: 'DELETE'
                     }
@@ -357,6 +432,14 @@
                 }
             }
         });
+
+        // 수정 버튼 클릭 이벤트
+        document.getElementById('edit-post-btn')?.addEventListener('click', function() {
+            window.location.href = `/templates/post-edit.html?id=${postId}`; // postId를 id로 변경
+        });        
+
+        // 삭제 버튼 클릭 이벤트
+        document.getElementById('delete-post-btn')?.addEventListener('click', handleDeletePost);
 
         // JWT 토큰 확인 및 초기 로드
         if (!getJWTToken()) {

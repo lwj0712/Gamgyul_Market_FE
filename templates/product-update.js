@@ -15,7 +15,6 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
-    // Helper functions
     const getValue = (id) => document.getElementById(id)?.value || '';
     const setValue = (id, value) => {
         const element = document.getElementById(id);
@@ -23,16 +22,12 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // 상품 정보 불러오기
-    fetch(`${API_BASE_URL}/market/products/${productId}`, {
-        method: 'GET',
-        headers: { 'Accept': 'application/json' }
-    })
+    fetch(`${API_BASE_URL}/market/products/${productId}/`)
     .then(response => response.json())
     .then(data => {
         ['name', 'price', 'description', 'stock', 'variety', 'growing_region', 'harvest_date']
             .forEach(field => setValue(field, data[field]));
 
-        // 기존 이미지 표시
         const imageContainer = document.createElement('div');
         imageContainer.id = 'existingImages';
         data.images.forEach((imageUrl, index) => {
@@ -52,7 +47,6 @@ document.addEventListener('DOMContentLoaded', function() {
         alert('상품 정보를 불러오는 데 실패했습니다.');
     });
 
-    // 이미지 미리보기 기능
     imageInput.addEventListener('change', function(event) {
         imagePreview.innerHTML = '';
         const files = event.target.files;
@@ -78,7 +72,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // 폼 제출 처리
     form.addEventListener('submit', function(e) {
         e.preventDefault();
 
@@ -94,11 +87,12 @@ document.addEventListener('DOMContentLoaded', function() {
             Array.from(imageInput.files).slice(0, 5).forEach(file => formData.append('image', file));
         }
 
-        fetch(`${API_BASE_URL}/market/products/${productId}/update/`, {
+        fetch(`${API_BASE_URL}/market/products/${productId}/`, {
             method: 'PATCH',
             body: formData,
-            credentials: 'include',
-            headers: { 'X-CSRFToken': getCSRFToken() }
+            headers: {
+                'Authorization': `Bearer ${getJWTToken()}`
+            }
         })
         .then(response => {
             if (!response.ok) {
@@ -119,8 +113,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-function getCSRFToken() {
-    return document.cookie.split('; ')
-        .find(row => row.startsWith('csrftoken='))
-        ?.split('=')[1] || '';
+function getJWTToken() {
+    return localStorage.getItem('jwt_token') || '';
 }

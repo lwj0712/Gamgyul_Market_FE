@@ -77,17 +77,26 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // 게시물 표시 함수 수정
     function displayPosts(posts) {
         console.log(posts);
-
-        posts.forEach(async post => {  // async 추가
+    
+        posts.forEach(async post => {
             const postElement = document.createElement('div');
             postElement.classList.add('card');
             
-            // 댓글 수를 가져오는 API 호출
             const comments = await fetchComments(post.id);
             const commentsCount = comments ? comments.length : 0;
+            // 좋아요 상태에 따른 클래스와 색상 설정
+            const isLiked = post.is_liked ? 'active text-primary' : '';
+
+            // 좋아요 상태에 따른 스타일 설정
+            const likeButtonStyle = post.is_liked 
+                ? `color: #0d6efd; font-weight: bold;` 
+                : `color: #666;`;
+            const likeIconStyle = post.is_liked 
+                ? `color: #0d6efd;` 
+                : `color: #666;`;
+            const likeText = post.is_liked ? '좋아요 취소' : '좋아요';
 
             postElement.innerHTML = `
                 <div class="card-header border-0 pb-0">
@@ -131,8 +140,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 ` : ''}
                 <ul class="nav nav-stack py-3 small ms-4">
                     <li class="nav-item">
-                        <a class="nav-link active like-button" href="#!" data-post-id="${post.id}" data-likes-count="${post.likes_count}">
-                            <i class="bi bi-hand-thumbs-up-fill pe-1"></i>좋아요 (<span class="likes-count">${post.likes_count}</span>)
+                        <a class="nav-link like-button ${post.is_liked ? 'active text-primary' : ''}" 
+                           href="#!" 
+                           data-post-id="${post.id}" 
+                           data-likes-count="${post.likes_count || 0}"
+                           data-is-liked="${post.is_liked || false}"
+                           style="${likeButtonStyle}">
+                            <i class="bi bi-hand-thumbs-up-fill pe-1" style="${likeIconStyle}"></i>
+                            <span class="like-text">${likeText}</span> 
+                            (<span class="likes-count">${post.likes_count || 0}</span>)
                         </a>
                     </li>
                     <li class="nav-item">
@@ -302,10 +318,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 `${API_BASE_URL}/likes/posts/${postId}/like/`,
                 { method: 'POST' }
             );
-
+    
             if (response && response.ok) {
-                // 응답이 숫자(좋아요 수)를 반환
-                return await response.json();
+                const data = await response.json();
+                return {
+                    likes_count: data.likes_count,
+                    is_liked: data.is_liked
+                };
             }
             return null;
         } catch (error) {
@@ -314,77 +333,105 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // 이벤트 리스너 설정
+    // 이벤트 리스너를 한 번만 등록하도록 수정
     function addEventListeners() {
-        // 좋아요 버튼 이벤트
-        document.querySelectorAll('.like-button').forEach(button => {
-            button.addEventListener('click', async (e) => {
-                e.preventDefault();
-                const postId = e.currentTarget.getAttribute('data-post-id');
-                const likeCount = await likePost(postId);
-                
-                if (likeCount !== null) {
-                    const likesCountElement = e.currentTarget.querySelector('.likes-count');
-                    if (likesCountElement) {
-                        likesCountElement.textContent = likeCount;
-                    }
-                    e.currentTarget.classList.toggle('active');
-                }
-            });
-        });
+        // 이미 이벤트 리스너가 등록되어 있는지 확인하는 플래그 추가
+        if (window.isEventListenerAdded) return;
 
-        // 팔로우 버튼 이벤트
-        document.querySelectorAll('.follow-btn').forEach(button => {
-            button.addEventListener('click', async (e) => {
-                e.preventDefault();
-                const userId = e.currentTarget.getAttribute('data-user-id');
-                const success = await followUser(userId);
-                
-                if (success) {
-                    const followBtn = e.currentTarget;
-                    followBtn.innerHTML = '<i class="fa-solid fa-check"> </i>';
-                    followBtn.classList.remove('btn-primary-soft');
-                    followBtn.classList.add('btn-success');
-                    followBtn.disabled = true;
-                }
-            });
-        });
-
-        // 포스트 상세 페이지로 이동 (포스트 내용 클릭 시)
-        document.querySelectorAll('.post-detail-link').forEach(element => {
-            element.addEventListener('click', (e) => {
-                const postId = e.currentTarget.getAttribute('data-post-id');
-                window.location.href = `/templates/post-detail.html?id=${postId}`;
-            });
-        });
-
-        // 댓글 버튼 클릭 시 상세 페이지로 이동
-        document.querySelectorAll('.comment-button').forEach(button => {
-            button.addEventListener('click', (e) => {
-                e.preventDefault();
-                const postId = e.currentTarget.getAttribute('data-post-id');
-                window.location.href = `/templates/post-detail.html?id=${postId}#comments`;
-            });
-        });
+        document.addEventListener('click', handleClick);
+        window.isEventListenerAdded = true;
     }
 
-    // 이벤트 리스너
-    document.querySelectorAll('.like-button').forEach(button => {
-        button.addEventListener('click', async (e) => {
+    // 클릭 이벤트 핸들러를 별도 함수로 분리
+    async function handleClick(e) {
+        // 좋아요 버튼 클릭 처리
+        if (e.target.closest('.like-button')) {
             e.preventDefault();
-            const postId = e.currentTarget.getAttribute('data-post-id');
-            const likesCount = await likePost(postId);
+            const button = e.target.closest('.like-button');
             
-            if (likesCount !== null) {
-                const likesCountElement = e.currentTarget.querySelector('.likes-count');
-                if (likesCountElement) {
-                    likesCountElement.textContent = likesCount;
+            // 이미 처리 중인 경우 중복 클릭 방지
+            if (button.dataset.processing === 'true') return;
+            
+            try {
+                button.dataset.processing = 'true';
+                
+                const postId = button.getAttribute('data-post-id');
+                const result = await likePost(postId);
+                
+                if (result !== null) {
+                    // 좋아요 수 업데이트
+                    const likesCountElement = button.querySelector('.likes-count');
+                    if (likesCountElement) {
+                        likesCountElement.textContent = result.likes_count;
+                    }
+                    
+                    // 좋아요 텍스트 업데이트
+                    const likeTextElement = button.querySelector('.like-text');
+                    if (likeTextElement) {
+                        likeTextElement.textContent = result.is_liked ? '좋아요 취소' : '좋아요';
+                    }
+                    
+                    // 버튼 스타일 업데이트
+                    button.style.color = result.is_liked ? '#0d6efd' : '#666';
+                    button.style.fontWeight = result.is_liked ? 'bold' : 'normal';
+                    
+                    // 아이콘 색상 업데이트
+                    const icon = button.querySelector('.bi-hand-thumbs-up-fill');
+                    if (icon) {
+                        icon.style.color = result.is_liked ? '#0d6efd' : '#666';
+                    }
+                    
+                    // 클래스 토글
+                    button.classList.toggle('active', result.is_liked);
+                    button.classList.toggle('text-primary', result.is_liked);
+                    
+                    // 데이터 속성 업데이트
+                    button.setAttribute('data-is-liked', result.is_liked);
+                    
+                    // 시각적 피드백
+                    showToast(result.is_liked ? '게시물을 좋아합니다.' : '좋아요를 취소했습니다.');
                 }
-                e.currentTarget.classList.toggle('active');
+            } finally {
+                button.dataset.processing = 'false';
             }
-        });
-    });
+        }
 
+        // 팔로우 버튼 클릭 처리
+        if (e.target.closest('.follow-btn')) {
+            e.preventDefault();
+            const button = e.target.closest('.follow-btn');
+            const userId = button.getAttribute('data-user-id');
+            const success = await followUser(userId);
+
+            if (success) {
+                button.innerHTML = '<i class="fa-solid fa-check"> </i>';
+                button.classList.remove('btn-primary-soft');
+                button.classList.add('btn-success');
+                button.disabled = true;
+            }
+        }
+
+        // 게시물 상세 페이지로 이동
+        if (e.target.closest('.post-detail-link')) {
+            const element = e.target.closest('.post-detail-link');
+            const postId = element.getAttribute('data-post-id');
+            window.location.href = `/templates/post-detail.html?id=${postId}`;
+        }
+
+        // 댓글 버튼 클릭 시 상세 페이지로 이동
+        if (e.target.closest('.comment-button')) {
+            e.preventDefault();
+            const button = e.target.closest('.comment-button');
+            const postId = button.getAttribute('data-post-id');
+            window.location.href = `/templates/post-detail.html?id=${postId}#comments`;
+        }
+    }
+
+    // 모든 이벤트 리스너 제거 함수 추가
+    function removeEventListeners() {
+        document.removeEventListener('click', handleClick);
+        window.isEventListenerAdded = false;
+    }
 
     // 초기 로드
     async function init() {
