@@ -233,7 +233,7 @@
 			  <div class="offcanvas-body p-0">
 				<div class="card card-chat-list rounded-end-lg-0 card-body border-end-lg-0 rounded-top-0">
 				  <form class="position-relative" id="user-search-container">
-					<input class="form-control py-2" type="search" placeholder="Search for chats" aria-label="Search" id="userSearchInput">
+					<input class="form-control py-2" type="search" placeholder="사용자 검색" aria-label="Search" id="userSearchInput">
 					<button class="btn bg-transparent text-secondary px-2 py-0 position-absolute top-50 end-0 translate-middle-y" type="submit">
 					  <i class="bi bi-search fs-5"></i>
 					</button>
@@ -258,7 +258,7 @@
 		  <div class="card card-chat rounded-start-lg-0 border-start-lg-0 d-flex flex-column h-100" id="chat-window">
 			<div class="card-header border-0 p-2">
 			  <form class="position-relative" id="message-search-container">
-				<input class="form-control py-2" type="search" placeholder="Search messages" aria-label="Search messages" id="messageSearchInput">
+				<input class="form-control py-2" type="search" placeholder="대화내용 검색" aria-label="Search messages" id="messageSearchInput">
 				<button class="btn bg-transparent text-secondary px-2 py-0 position-absolute top-50 end-0 translate-middle-y" type="submit">
 				  <i class="bi bi-search fs-5"></i>
 				</button>
@@ -271,8 +271,9 @@
 			  </div>
 			  <!-- Message input form (fixed position) -->
 			  <form id="message-form" class="d-flex align-items-center" style="position: sticky; bottom: 0; background-color: #fff; padding: 10px; border-top: 1px solid #dee2e6;">
-				<input type="text" id="message-input" class="form-control me-2" placeholder="Type a message...">
-				<button type="submit" class="btn btn-primary">Send</button>
+				<input type="text" id="message-input" class="form-control me-2" placeholder="메시지 입력">
+				<button class="btn btn-sm btn-secondary-soft ms-2"><i class="fa-solid fa-paperclip fs-6"></i></button>
+				<button class="btn btn-sm btn-primary ms-2"><i class="fa-solid fa-paper-plane fs-6"></i></button>
 			  </form>
 			</div>
 		  </div>
