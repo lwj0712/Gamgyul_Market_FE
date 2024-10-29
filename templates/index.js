@@ -62,10 +62,10 @@ document.addEventListener('DOMContentLoaded', function() {
     async function fetchPosts(page = 1) {
         try {
             const response = await authenticatedFetch(
-                `http://127.0.0.1:8000/posts/posts/?limit=${postsPerPage}&offset=${(page - 1) * postsPerPage}`,
+                `${API_BASE_URL}/posts/posts/?limit=${postsPerPage}&offset=${(page - 1) * postsPerPage}`,
                 { method: 'GET' }
             );
-
+    
             if (response && response.ok) {
                 const data = await response.json();
                 return data;
@@ -219,7 +219,7 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const tagParams = tags.map(tag => `tags=${encodeURIComponent(tag)}`).join('&');
             const response = await authenticatedFetch(
-                `http://127.0.0.1:8000/search/search-post/?${tagParams}`,
+                `${API_BASE_URL}/search/search-post/?${tagParams}`,
                 { method: 'GET' }
             );
 
@@ -254,7 +254,7 @@ document.addEventListener('DOMContentLoaded', function() {
     async function fetchFriendRecommendations() {
         try {
             const response = await authenticatedFetch(
-                'http://127.0.0.1:8000/recommendations/recommend/',
+                `${API_BASE_URL}/recommendations/recommend/`,
                 { method: 'GET' }
             );
 
@@ -311,7 +311,7 @@ document.addEventListener('DOMContentLoaded', function() {
     async function followUser(userId) {
         try {
             const response = await authenticatedFetch(
-                `http://127.0.0.1:8000/follow/follow/${userId}/`,
+                `${API_BASE_URL}/follow/follow/${userId}/`,
                 { method: 'POST' }
             );
 
