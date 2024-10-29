@@ -35,7 +35,6 @@ async function fetchProductDetails() {
         const product = await productResponse.json();
         const currentUserId = getCurrentUserId();
         
-        // 프로필 이미지 업데이트
         const profileImage = document.querySelector('#user-profile-image');
         if (profileImage && product.user_profile_image) {
             profileImage.src = product.user_profile_image;
@@ -43,7 +42,6 @@ async function fetchProductDetails() {
             profileImage.src = '/static/images/default-profile.png';
         }
 
-        // 나머지 제품 정보 표시
         displayProductDetails(product, currentUserId);
     } catch (error) {
         console.error('Error fetching product details:', error);
