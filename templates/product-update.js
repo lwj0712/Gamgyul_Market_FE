@@ -21,7 +21,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (element) element.value = value;
     };
 
-    // 상품 정보 불러오기
     fetch(`${API_BASE_URL}/market/products/${productId}/`)
     .then(response => response.json())
     .then(data => {
