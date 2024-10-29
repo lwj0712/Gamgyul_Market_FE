@@ -19,55 +19,67 @@ document.addEventListener('DOMContentLoaded', function() {
                 <button class="btn btn-primary" type="submit">검색</button>
             </div>
             <select class="form-select flex-grow-0" style="width: auto;" id="order-select">
-                <option value="-created_at" selected>최신순</option>
+                <option value="-created_at">최신순</option>
                 <option value="created_at">오래된순</option>
             </select>
         </div>
     `;
 
+    const orderSelect = document.getElementById('order-select');
+    const searchInput = document.getElementById('search-input');
+    const categorySelect = document.getElementById('search-category');
+
+    orderSelect.value = ordering;
+    searchInput.value = searchQuery;
+    categorySelect.value = searchCategory;
+
     searchForm.addEventListener('submit', function(e) {
         e.preventDefault();
-        searchQuery = document.getElementById('search-input').value.trim();
-        searchCategory = document.getElementById('search-category').value;
-        currentPage = 1; // 검색 시 첫 페이지로 리셋
+        searchQuery = searchInput.value.trim();
+        searchCategory = categorySelect.value;
+        currentPage = 1;
         loadProducts(currentPage, searchQuery, searchCategory);
     });
 
-    const searchInput = document.getElementById('search-input');
     searchInput.addEventListener('input', function(e) {
         if (this.value === '') {
             searchQuery = '';
             searchCategory = 'all';
+            categorySelect.value = 'all';
             currentPage = 1;
             loadProducts(currentPage, searchQuery, searchCategory);
         }
     });
 
-    const orderSelect = document.getElementById('order-select');
     orderSelect.addEventListener('change', function(e) {
+        e.preventDefault();
         ordering = this.value;
-        currentPage = 1; // 정렬 변경 시 첫 페이지로 리셋
+        currentPage = 1;
+        
         loadProducts(currentPage, searchQuery, searchCategory);
     });
 });
 
 function loadProducts(page, search, category) {
-    let url = `${API_BASE_URL}/search/search-product/?page=${page}&ordering=${ordering}`;
+    const baseUrl = `${API_BASE_URL}/search/search-product/`;
+
+    const params = new URLSearchParams({
+        page: page,
+        ordering: ordering
+    });
     
     if (search) {
-        url += `&q=${encodeURIComponent(search)}`;
-        if (category && category !== 'all') {
-            url += `&category=${encodeURIComponent(category)}`;
+        params.append('q', search);
+        if (category !== 'all') {
+            params.append('category', category);
         }
     }
-
-    fetch(url)
+    
+    fetch(`${baseUrl}?${params.toString()}`)
         .then(response => response.json())
         .then(data => {
             displayProducts(data.results);
-            if (data.count > 0) { // 결과가 있을 때만 페이지네이션 표시
-                displayPagination(data);
-            }
+            displayPagination(data);
             
             const oldSummary = document.querySelector('.alert.alert-info');
             if (oldSummary) {
@@ -138,77 +150,77 @@ function displayProducts(products) {
 
 function displayPagination(data) {
     const pagination = document.getElementById('pagination');
+    if (!pagination) {
+        console.error('Pagination element not found');
+        return;
+    }
+    
     pagination.innerHTML = '';
 
     const totalPages = Math.ceil(data.count / 10);
-
+    
     if (totalPages <= 1) {
         return;
     }
 
-    const pageList = document.createElement('ul');
-    pageList.className = 'pagination justify-content-center';
-    pagination.appendChild(pageList);
-
-    if (data.previous) {
-        addPageButton(pageList, currentPage - 1, '이전');
+    const ul = document.createElement('ul');
+    ul.className = 'pagination justify-content-center';
+    
+    if (currentPage > 1) {
+        const prevLi = createPageItem('이전', currentPage - 1);
+        ul.appendChild(prevLi);
     }
 
-    let startPage = Math.max(1, currentPage - 2);
-    let endPage = Math.min(totalPages, currentPage + 2);
-
-    if (startPage > 1) {
-        addPageButton(pageList, 1);
-        if (startPage > 2) {
-            pageList.appendChild(createEllipsis());
+    for (let i = 1; i <= totalPages; i++) {
+        if (
+            i === 1 ||
+            i === totalPages ||
+            (i >= currentPage - 2 && i <= currentPage + 2)
+        ) {
+            const li = createPageItem(i, i);
+            if (i === currentPage) {
+                li.classList.add('active');
+            }
+            ul.appendChild(li);
+        } else if (
+            (i === currentPage - 3 && currentPage > 4) ||
+            (i === currentPage + 3 && currentPage < totalPages - 3)
+        ) {
+            const ellipsis = document.createElement('li');
+            ellipsis.className = 'page-item disabled';
+            ellipsis.innerHTML = '<span class="page-link">...</span>';
+            ul.appendChild(ellipsis);
         }
     }
 
-    for (let i = startPage; i <= endPage; i++) {
-        addPageButton(pageList, i);
+    if (currentPage < totalPages) {
+        const nextLi = createPageItem('다음', currentPage + 1);
+        ul.appendChild(nextLi);
     }
 
-    if (endPage < totalPages) {
-        if (endPage < totalPages - 1) {
-            pageList.appendChild(createEllipsis());
-        }
-        addPageButton(pageList, totalPages);
-    }
-
-    if (data.next) {
-        addPageButton(pageList, currentPage + 1, '다음');
-    }
+    pagination.appendChild(ul);
 }
 
-function addPageButton(parent, pageNumber, text = pageNumber) {
+function createPageItem(text, pageNumber) {
     const li = document.createElement('li');
-    li.className = `page-item ${pageNumber === currentPage ? 'active' : ''}`;
+    li.className = 'page-item';
     
-    const a = document.createElement('a');
-    a.className = 'page-link';
-    a.href = '#';
-    a.textContent = text;
-    a.addEventListener('click', function(e) {
+    const link = document.createElement('a');
+    link.className = 'page-link';
+    link.href = '#';
+    link.textContent = text;
+    
+    link.addEventListener('click', (e) => {
         e.preventDefault();
         currentPage = pageNumber;
         loadProducts(currentPage, searchQuery, searchCategory);
-
+        
         window.scrollTo({
             top: 0,
             behavior: 'smooth'
         });
     });
-
-    li.appendChild(a);
-    parent.appendChild(li);
-}
-
-function createEllipsis() {
-    const li = document.createElement('li');
-    li.className = 'page-item disabled';
-    const span = document.createElement('span');
-    span.className = 'page-link';
-    span.textContent = '...';
-    li.appendChild(span);
+    
+    li.appendChild(link);
     return li;
 }
