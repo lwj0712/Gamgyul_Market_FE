@@ -35,7 +35,7 @@ function getCurrentUser() {
 
 // Modified fetch wrapper with JWT authentication
 async function fetchWithAuth(url, method = 'GET', body = null) {
-    const token = getToken();
+    const token = getJWTToken();
     if (!token && !url.includes('/login/')) {
         window.location.href = '/templates/login.html';
         return null;
@@ -44,8 +44,8 @@ async function fetchWithAuth(url, method = 'GET', body = null) {
     const options = {
         method: method,
         headers: {
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
         }
     };
 
@@ -53,25 +53,16 @@ async function fetchWithAuth(url, method = 'GET', body = null) {
         options.body = JSON.stringify(body);
     }
 
-    try {
-        const response = await fetch(url, options);
+    const response = await fetch(url, options);
 
-        if (response.status === 401) {
-            removeToken();
-            localStorage.removeItem('user');
-            window.location.href = '/templates/login.html';
-            return null;
-        }
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        return await response.json();
-    } catch (error) {
-        console.error('Fetch error:', error);
-        throw error;
+    if (response.status === 401) {
+        removeJWTToken();
+        localStorage.removeItem('user');
+        window.location.href = '/templates/login.html';
+        return null;
     }
+
+    return response;
 }
 
 function getFullImageUrl(imageUrl) {
@@ -91,15 +82,18 @@ function showErrorMessage(message) {
 async function getChatRooms() {
     try {
         const response = await fetchWithAuth(`${API_BASE_URL}/chats/chatrooms/`);
-        console.log('Chat rooms response:', response);
+        if (!response) return;
+        
+        const data = await response.json();
+        console.log('Chat rooms response:', data);
         
         // response.results가 있으면 사용하고, 없으면 response 자체가 배열인지 확인
-        const chatRooms = response.results || response;
+        const chatRooms = data.results || data;
         
         if (Array.isArray(chatRooms)) {
             displayChatRooms(chatRooms);
         } else {
-            console.error('Unexpected response format:', response);
+            console.error('Unexpected response format:', data);
             throw new Error('Invalid response format for chat rooms');
         }
     } catch (error) {
@@ -152,10 +146,13 @@ async function openChatRoom(roomId) {
         chatWindow.style.display = 'block';
 
         const response = await fetchWithAuth(`${API_BASE_URL}/chats/chatrooms/${roomId}/messages/`);
-        console.log('Messages response:', response);
+        if (!response) return;
+
+        const data = await response.json();
+        console.log('Messages response:', data);
 
         // response.results가 있으면 사용하고, 없으면 response 자체가 배열인지 확인
-        const messages = response.results || response;
+        const messages = data.results || data;
         
         if (Array.isArray(messages)) {
             messages.forEach(message => {
@@ -170,7 +167,7 @@ async function openChatRoom(roomId) {
                 });
             });
         } else {
-            console.error('Unexpected response format:', response);
+            console.error('Unexpected response format:', data);
             throw new Error('Unexpected message format');
         }
         
@@ -190,7 +187,7 @@ function setupChatWebSocket(roomId) {
         socket.close();
     }
     
-    const token = getToken();
+    const token = getJWTToken();
     if (!token) {
         console.error('No JWT token available for WebSocket connection');
         return;
@@ -275,16 +272,19 @@ async function sendMessage(content) {
             { content }
         );
         
-        console.log('Server response:', response);
+        if (!response) return;
+        
+        const data = await response.json();
+        console.log('Server response:', data);
 
-        if (response && response.id) {
+        if (data && data.id) {
             document.getElementById('message-input').value = '';
             const currentUser = getCurrentUser();
             addMessage({
-                id: response.id,
+                id: data.id,
                 content: content,
                 sender: currentUser,
-                sent_at: response.sent_at,
+                sent_at: data.sent_at,
                 is_read: false
             });
             console.log('Message sent successfully, waiting for WebSocket broadcast');
@@ -472,12 +472,15 @@ document.addEventListener('DOMContentLoaded', function() {
 // Update initialization function
 async function initChat() {
     try {
-        if (!getToken()) {
+        if (!getJWTToken()) {
             window.location.href = '/templates/login.html';
             return;
         }
 
-        const userData = await fetchCurrentUserInfo();
+        const userResponse = await fetchWithAuth(`${API_BASE_URL}/accounts/current-user/`);
+        if (!userResponse) return;
+
+        const userData = await userResponse.json();
         if (userData) {
             currentUserId = userData.id;
             await getChatRooms();
@@ -487,7 +490,6 @@ async function initChat() {
     } catch (error) {
         console.error('Error initializing chat:', error);
         showErrorMessage('채팅 초기화에 실패했습니다.');
-        window.location.href = '/templates/login.html';
     }
 }
 
