@@ -26,23 +26,47 @@ async function fetchProductDetails() {
         if (!productId) {
             throw new Error('Product ID not found in URL');
         }
-        const response = await fetch(`${API_BASE_URL}/market/products/${productId}`);
-        const product = await response.json();
-        displayProductDetails(product);
+
+        const [currentUser, productResponse] = await Promise.all([
+            getCurrentUser(),
+            fetch(`${API_BASE_URL}/market/products/${productId}`)
+        ]);
+
+        const product = await productResponse.json();
+        const currentUserId = getCurrentUserId();
+        
+        // 프로필 이미지 업데이트
+        const profileImage = document.querySelector('#user-profile-image');
+        if (profileImage && product.user_profile_image) {
+            profileImage.src = product.user_profile_image;
+        } else if (profileImage) {
+            profileImage.src = '/static/images/default-profile.png';
+        }
+
+        // 나머지 제품 정보 표시
+        displayProductDetails(product, currentUserId);
     } catch (error) {
         console.error('Error fetching product details:', error);
     }
 }
 
-function displayProductDetails(product) {
-    const formattedPrice = parseInt(product.price).toLocaleString('ko-KR');
-    
-    // 요소와 값을 매핑
+function displayProductDetails(product, currentUserId) {
+    // 사용자 프로필 정보 표시
+    const profileImage = document.querySelector('.avatar.avatar-story.me-2');
+    if (profileImage) {
+        profileImage.innerHTML = `
+            <img src="${product.user_profile_image || '/static/images/default-profile.png'}" 
+                 class="avatar-img rounded-circle" 
+                 alt="${product.username}'s profile">
+        `;
+    }
+
+    // 기본 제품 정보 표시
     const elements = {
-        'product-name': product.name,
         'product-username': product.username,
-        'product-timestamp': product.created_at,
-        'product-price': `${formattedPrice}`,
+        'product-timestamp': new Date(product.created_at).toLocaleString(),
+        'product-name': product.name,
+        'product-price': `${parseInt(product.price).toLocaleString('ko-KR')}`,
         'product-description': product.description,
         'product-stock': product.stock,
         'product-variety': product.variety,
@@ -50,32 +74,39 @@ function displayProductDetails(product) {
         'product-harvest-date': product.harvest_date
     };
 
-    // 각 요소에 대해 안전하게 값을 설정
+    // 각 요소 업데이트
     for (const [id, value] of Object.entries(elements)) {
         const element = document.getElementById(id);
         if (element) {
             element.textContent = value;
-        } else {
-            console.warn(`Element with id '${id}' not found`);
         }
     }
 
-    // 이미지 처리
+    // 제품 이미지 표시
     const productImages = document.getElementById('product-images');
-    if (productImages) {
-        productImages.innerHTML = '';
-        if (product.images && product.images.length > 0) {
-            product.images.forEach(image => {
-                const img = document.createElement('img');
-                img.src = image;
-                img.alt = product.name;
-                img.className = 'img-fluid mb-2';
-                img.onerror = function() {
-                    this.src = DEFAULT_PROFILE_IMAGE;
-                };
-                productImages.appendChild(img);
-            });
-        }
+    if (productImages && product.images && product.images.length > 0) {
+        productImages.innerHTML = product.images.map((image, index) => `
+            <img src="${image}" 
+                 alt="${product.name}" 
+                 class="img-fluid mb-2" 
+                 onerror="this.src='/static/images/default-product.png'">`
+        ).join('');
+    }
+
+    // 수정/삭제 버튼 표시 여부
+    const editButton = document.getElementById('edit-button');
+    const deleteButton = document.getElementById('delete-button');
+    
+    if (editButton && deleteButton) {
+        const isOwner = currentUserId === product.user_id;
+        editButton.style.display = isOwner ? 'inline-block' : 'none';
+        deleteButton.style.display = isOwner ? 'inline-block' : 'none';
+    }
+
+    // 신고 버튼
+    const reportButton = document.querySelector('.report-button-container');
+    if (reportButton) {
+        reportButton.style.display = currentUserId !== product.user_id ? 'block' : 'none';
     }
 }
 
@@ -160,3 +191,12 @@ document.addEventListener('DOMContentLoaded', function() {
         window.location.href = `report-form.html?content_type=market.product&object_id=${productId}`;
     });
 });
+
+function getCurrentUserId() {
+    const userJson = localStorage.getItem('user');
+    if (userJson) {
+        const user = JSON.parse(userJson);
+        return user.uuid;
+    }
+    return null;
+}
