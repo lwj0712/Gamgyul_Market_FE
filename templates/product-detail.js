@@ -51,7 +51,6 @@ async function fetchProductDetails() {
 }
 
 function displayProductDetails(product, currentUserId) {
-    // 사용자 프로필 정보 표시
     const profileImage = document.querySelector('.avatar.avatar-story.me-2');
     if (profileImage) {
         profileImage.innerHTML = `
@@ -61,7 +60,6 @@ function displayProductDetails(product, currentUserId) {
         `;
     }
 
-    // 기본 제품 정보 표시
     const elements = {
         'product-username': product.username,
         'product-timestamp': new Date(product.created_at).toLocaleString(),
@@ -74,7 +72,6 @@ function displayProductDetails(product, currentUserId) {
         'product-harvest-date': product.harvest_date
     };
 
-    // 각 요소 업데이트
     for (const [id, value] of Object.entries(elements)) {
         const element = document.getElementById(id);
         if (element) {
@@ -82,7 +79,6 @@ function displayProductDetails(product, currentUserId) {
         }
     }
 
-    // 제품 이미지 표시
     const productImages = document.getElementById('product-images');
     if (productImages && product.images && product.images.length > 0) {
         productImages.innerHTML = product.images.map((image, index) => `
@@ -93,7 +89,6 @@ function displayProductDetails(product, currentUserId) {
         ).join('');
     }
 
-    // 수정/삭제 버튼 표시 여부
     const editButton = document.getElementById('edit-button');
     const deleteButton = document.getElementById('delete-button');
     
@@ -103,7 +98,6 @@ function displayProductDetails(product, currentUserId) {
         deleteButton.style.display = isOwner ? 'inline-block' : 'none';
     }
 
-    // 신고 버튼
     const reportButton = document.querySelector('.report-button-container');
     if (reportButton) {
         reportButton.style.display = currentUserId !== product.user_id ? 'block' : 'none';
