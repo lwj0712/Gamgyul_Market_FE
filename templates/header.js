@@ -75,7 +75,53 @@ function getFullImageUrl(imageUrl) {
 
 function showErrorMessage(message) {
     console.error(message);
-    // TODO: Implement UI error message display
+    showToast(message, 'danger');
+}
+
+function showSuccessMessage(message) {
+    console.log(message);
+    showToast(message, 'success');
+}
+
+// Toast message utility function
+function showToast(message, type = 'info') {
+    // Create toast container if it doesn't exist
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.className = 'position-fixed bottom-0 end-0 p-3';
+        document.body.appendChild(toastContainer);
+    }
+
+    // Create toast element
+    const toastId = 'toast-' + Date.now();
+    const toastHtml = `
+        <div id="${toastId}" class="toast align-items-center text-white bg-${type}" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    `;
+
+    // Add toast to container
+    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+
+    // Initialize and show toast using Bootstrap
+    const toastElement = document.getElementById(toastId);
+    const toast = new bootstrap.Toast(toastElement, {
+        autohide: true,
+        delay: 3000
+    });
+    toast.show();
+
+    // Remove toast element after it's hidden
+    toastElement.addEventListener('hidden.bs.toast', () => {
+        toastElement.remove();
+    });
 }
 
 // Bootstrap Dropdowns 초기화
@@ -185,15 +231,18 @@ function renderNotifications() {
 
     notificationList.innerHTML = '';
     notifications.forEach((notification) => {
+        // sender가 없거나 profile_image가 없는 경우를 대비해 기본값 설정
+        const senderProfileImage = notification.sender?.profile_image || DEFAULT_PROFILE_IMAGE;
+        
         const li = document.createElement('li');
         li.innerHTML = `
             <div class="list-group-item list-group-item-action rounded d-flex border-0 mb-1 p-3">
                 <div class="avatar text-center d-none d-sm-inline-block">
-                    <img class="avatar-img rounded-circle" src="${getFullImageUrl(notification.sender.profile_image)}" alt="">
+                    <img class="avatar-img rounded-circle" src="${getFullImageUrl(senderProfileImage)}" alt="">
                 </div>
                 <div class="ms-sm-3 d-flex">
                     <div>
-                        <p class="small mb-2">${notification.message}</p>
+                        <p class="small mb-2">${notification.message || '알림 내용이 없습니다.'}</p>
                         <p class="small ms-3">${new Date(notification.created_at).toLocaleString()}</p>
                     </div>
                     <button class="btn btn-sm btn-danger-soft ms-auto" onclick="deleteNotification('${notification.id}')">삭제</button>
