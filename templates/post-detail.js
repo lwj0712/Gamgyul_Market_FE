@@ -270,10 +270,24 @@
         // 댓글 작성
         async function handleCommentSubmit(event) {
             event.preventDefault();
+            
             const commentInput = document.getElementById('comment-input');
+            const urlParams = new URLSearchParams(window.location.search);
+            const postId = urlParams.get('postId');
+        
+            if (!commentInput) {
+                console.error('댓글 입력 요소를 찾을 수 없습니다.');
+                alert('죄송합니다. 댓글을 제출할 수 없습니다. 페이지를 새로고침한 후 다시 시도해 주세요.');
+                return;
+            }
+        
             const content = commentInput.value.trim();
-            if (!content) return;
-
+            
+            if (!content) {
+                alert('댓글 내용을 입력해주세요.');
+                return;
+            }
+            
             try {
                 const response = await authenticatedFetch(
                     `${API_BASE_URL}/comments/posts/${postId}/comments/`,
@@ -290,8 +304,26 @@
                     commentInput.value = '';
                 }
             } catch (error) {
-                console.error('댓글 작성 중 오류 발생:', error);
+                console.error('댓글 제출 중 오류 발생:', error);
+                alert('댓글 제출에 실패했습니다: ' + error.message);
             }
+        }
+        
+        function addCommentToList(comment) {
+            const commentsList = document.getElementById('comments-list');
+            const li = document.createElement('li');
+            li.className = 'mb-2';
+            
+            li.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <img src="${comment.user.profile_image || DEFAULT_PROFILE_IMAGE}" alt="${comment.user.username}" class="rounded-circle me-2" width="32" height="32">
+                    <strong>${comment.user.username}</strong>
+                </div>
+                <p class="mb-1">${comment.content}</p>
+                <small class="text-muted">${new Date(comment.created_at).toLocaleString()}</small>
+            `;
+            
+            commentsList.appendChild(li);
         }
 
         // 대댓글 작성
@@ -301,7 +333,7 @@
             const content = replyInput.value.trim();
             const commentId = event.target.dataset.commentId;
             if (!content) return;
-
+    
             try {
                 const response = await authenticatedFetch(
                     `${API_BASE_URL}/comments/posts/${postId}/comments/`,
