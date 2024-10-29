@@ -261,16 +261,15 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!postList) return;
         if (posts && posts.length > 0) {
             postList.innerHTML = posts.map(post => {
-                // images 배열이 있는지 확인하고, 없다면 빈 배열로 초기화
                 const images = post.images || [];
-                // 첫 번째 이미지가 있으면 사용하고, 없으면 기본 이미지 사용
                 const imageUrl = images.length > 0 ? getFullImageUrl(images[0]) : DEFAULT_PROFILE_IMAGE;
-                // comments 배열이 있는지 확인
                 const commentsCount = post.comments ? post.comments.length : 0;
-                
+
                 return `
                     <div class="col-sm-6 col-lg-4">
-                        <div class="card h-100">
+                        <div class="card h-100 post-card" 
+                             data-post-id="${post.id}" 
+                             style="cursor: pointer; transition: transform 0.2s;">
                             <div class="position-relative">
                                 <img src="${imageUrl}" class="card-img-top" alt="게시물 이미지">
                             </div>
@@ -290,6 +289,25 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 `;
             }).join('');
+
+            // Add hover effect with CSS
+            const style = document.createElement('style');
+            style.textContent = `
+                .post-card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                }
+            `;
+            document.head.appendChild(style);
+
+            // Add click event listeners to all post cards
+            const postCards = postList.querySelectorAll('.post-card');
+            postCards.forEach(card => {
+                card.addEventListener('click', () => {
+                    const postId = card.getAttribute('data-post-id');
+                    window.location.href = `/templates/post-detail.html?id=${postId}`;
+                });
+            });
         } else {
             postList.innerHTML = '<p class="col-12">등록된 게시물이 없습니다.</p>';
         }
@@ -299,10 +317,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!productList) return;
         if (products && products.length > 0) {
             productList.innerHTML = products.map(product => `
-                <div class="card mb-3">
+                <div class="card mb-3 product-card" 
+                     data-product-id="${product.id}"
+                     style="cursor: pointer; transition: transform 0.2s;">
                     <div class="row g-0">
                         <div class="col-md-4">
-                            <img src="${getFullImageUrl(product.images[0])}" class="img-fluid rounded-start" alt="${product.name}">
+                            <img src="${getFullImageUrl(product.images[0])}" 
+                                 class="img-fluid rounded-start" 
+                                 alt="${product.name}">
                         </div>
                         <div class="col-md-8">
                             <div class="card-body">
@@ -312,12 +334,30 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <p class="card-text">품종: ${product.variety}</p>
                                 <p class="card-text">재배 지역: ${product.growing_region}</p>
                                 <p class="card-text">수확일: ${product.harvest_date}</p>
-                                <p class="card-text"><small class="text-muted">평균 평점: ${product.average_rating}</small></p>
                             </div>
                         </div>
                     </div>
                 </div>
             `).join('');
+    
+            // Add hover effect with CSS
+            const style = document.createElement('style');
+            style.textContent = `
+                .product-card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                }
+            `;
+            document.head.appendChild(style);
+    
+            // Add click event listeners to all product cards
+            const productCards = productList.querySelectorAll('.product-card');
+            productCards.forEach(card => {
+                card.addEventListener('click', () => {
+                    const productId = card.getAttribute('data-product-id');
+                    window.location.href = `/templates/product-detail.html?id=${productId}`;
+                });
+            });
         } else {
             productList.innerHTML = '<p>등록된 상품이 없습니다.</p>';
         }

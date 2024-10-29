@@ -98,6 +98,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 : `color: #666;`;
             const likeText = post.is_liked ? '좋아요 취소' : '좋아요';
 
+            // 이미지 URL 처리 로직 수정
+            const imageUrl = post.images && post.images.length > 0
+            ? post.images[0]  // S3 URL을 직접 사용
+            : '/templates/images/placeholder.jpg';
+
             postElement.innerHTML = `
                 <div class="card-header border-0 pb-0">
                     <div class="d-flex align-items-center justify-content-between">
@@ -122,9 +127,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 <!-- Card body -->
                 <div class="card-body post-detail-link" data-post-id="${post.id}">
                     <p>${post.content}</p>
-                    <div>
-                        <img src="${post.images[0] ? `${API_BASE_URL}${post.images[0]}` : '/templates/images/placeholder.jpg'}" class="card-img-top" alt="Post image">
-                    </div>
+                    ${post.images && post.images.length > 0 ? `
+                        <div>
+                            <img src="${imageUrl}" 
+                                 class="card-img-top" 
+                                 alt="Post image"
+                                 onerror="this.src='/templates/images/placeholder.jpg'"
+                            >
+                        </div>
+                    ` : ''}
                 </div>
                 <!-- Card feed action START -->
                 <!-- 태그 표시 부분 -->
