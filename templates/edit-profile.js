@@ -1,4 +1,5 @@
 const API_BASE_URL = 'http://127.0.0.1:8000';
+const DEFAULT_PROFILE_IMAGE = '/templates/images/placeholder.jpg';
 
 // JWT Token Utilities
 function getJWTToken() {
@@ -21,6 +22,23 @@ function getCurrentUser() {
 
 function isLoggedIn() {
     return !!getJWTToken() && !!getCurrentUser();
+}
+
+// 이미지 URL 처리 함수 추가
+function getFullImageUrl(imageUrl) {
+    if (!imageUrl) return DEFAULT_PROFILE_IMAGE;
+    
+    // 이미 완전한 URL인 경우
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+        return imageUrl;
+    }
+    
+    // media 경로로 시작하는 경우
+    if (imageUrl.startsWith('media/') || imageUrl.startsWith('/media/')) {
+        return `${API_BASE_URL}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+    }
+    
+    return DEFAULT_PROFILE_IMAGE;
 }
 
 async function fetchWithAuth(url, method = 'GET', body = null) {
@@ -73,7 +91,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // 현재 프로필 정보 로드
     async function loadCurrentProfile() {
         try {
-            // 프로필 조회 API 엔드포인트 수정
             const response = await fetchWithAuth(`${API_BASE_URL}/profiles/profile/`);
             if (!response) return;
     
@@ -83,8 +100,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
                 usernameInput.value = profileData.username;
                 bioInput.value = profileData.bio || '';
-                if (profileData.profile_image) {
-                    currentProfileImage.src = `${API_BASE_URL}${profileData.profile_image}`;
+                
+                // 프로필 이미지 처리
+                if (currentProfileImage) {
+                    currentProfileImage.src = getFullImageUrl(profileData.profile_image);
+                    currentProfileImage.onerror = function() {
+                        this.src = DEFAULT_PROFILE_IMAGE;
+                    };
                 }
                 
                 if (backToProfileLink && profileData.id) {
@@ -92,7 +114,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
     
                 // 로컬 스토리지 사용자 정보 업데이트
-                if (profileData.id) {  // id가 존재하는 경우에만 저장
+                if (profileData.id) {
                     localStorage.setItem('user', JSON.stringify({
                         uuid: profileData.id,
                         email: profileData.email,
@@ -111,8 +133,31 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // 초기 프로필 로드
     loadCurrentProfile();
 
+    // 이미지 미리보기 함수
+    function handleImagePreview(file) {
+        if (file && currentProfileImage) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                currentProfileImage.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    // 프로필 이미지 변경 이벤트 리스너
+    if (profileImageInput) {
+        profileImageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handleImagePreview(file);
+            }
+        });
+    }
+
+    // 프로필 수정 제출
     editProfileForm.addEventListener('submit', async function(e) {
         e.preventDefault();
     
@@ -135,17 +180,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 const updatedProfile = await response.json();
                 console.log('Updated profile data:', updatedProfile);
                 
-                if (updatedProfile.id) {  // id가 존재하는 경우에만 저장
+                if (updatedProfile.id) {
                     localStorage.setItem('user', JSON.stringify({
                         uuid: updatedProfile.id,
                         email: updatedProfile.email,
                         username: updatedProfile.username,
                         profile_image: updatedProfile.profile_image
                     }));
-                }
-    
-                alert('프로필이 성공적으로 수정되었습니다.');
-                if (updatedProfile.id) {
+                    
+                    alert('프로필이 성공적으로 수정되었습니다.');
                     window.location.href = `/templates/profile.html?uuid=${updatedProfile.id}`;
                 }
             } else if (response) {
@@ -155,17 +198,6 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('프로필 수정 중 오류 발생:', error);
             alert('프로필 수정 중 오류가 발생했습니다.');
-        }
-    });
-
-    // 프로필 이미지 미리보기
-    profileImageInput.addEventListener('change', function(e) {
-        if (this.files && this.files[0]) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                currentProfileImage.src = e.target.result;
-            };
-            reader.readAsDataURL(this.files[0]);
         }
     });
 });

@@ -273,7 +273,13 @@
             
             const commentInput = document.getElementById('comment-input');
             const urlParams = new URLSearchParams(window.location.search);
-            const postId = urlParams.get('postId');
+            const postId = urlParams.get('id');
+            
+            if (!postId) {
+                console.error('게시물 ID를 찾을 수 없습니다.');
+                alert('게시물을 찾을 수 없습니다.');
+                return;
+            }
         
             if (!commentInput) {
                 console.error('댓글 입력 요소를 찾을 수 없습니다.');
@@ -296,8 +302,15 @@
                         body: JSON.stringify({ content })
                     }
                 );
-                if (!response) return;
+                
+                if (!response || !response.ok) {
+                    throw new Error('댓글 작성에 실패했습니다.');
+                }
+        
+                const responseData = await response.json();
+                console.log('댓글 작성 응답:', responseData);
 
+                // 댓글 목록 새로고침
                 const comments = await fetchComments(postId);
                 if (comments) {
                     displayComments(comments);
@@ -305,7 +318,7 @@
                 }
             } catch (error) {
                 console.error('댓글 제출 중 오류 발생:', error);
-                alert('댓글 제출에 실패했습니다: ' + error.message);
+                alert('댓글 제출에 실패했습니다.');
             }
         }
         

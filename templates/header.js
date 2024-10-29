@@ -65,12 +65,21 @@ async function fetchWithAuth(url, method = 'GET', body = null) {
     return response;
 }
 
+// 이미지 URL 처리 함수
 function getFullImageUrl(imageUrl) {
     if (!imageUrl) return DEFAULT_PROFILE_IMAGE;
+    
+    // 이미 완전한 URL인 경우 (S3 URL 포함)
     if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
         return imageUrl;
     }
-    return `${API_BASE_URL}${imageUrl}`;
+    
+    // S3 URL인 경우 (상대 경로로 온 경우)
+    if (imageUrl.startsWith('media/') || imageUrl.startsWith('/media/')) {
+        return `${API_BASE_URL}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+    }
+    
+    return DEFAULT_PROFILE_IMAGE;
 }
 
 function showErrorMessage(message) {
@@ -231,18 +240,24 @@ function renderNotifications() {
 
     notificationList.innerHTML = '';
     notifications.forEach((notification) => {
-        // sender가 없거나 profile_image가 없는 경우를 대비해 기본값 설정
-        const senderProfileImage = notification.sender?.profile_image || DEFAULT_PROFILE_IMAGE;
+        const senderProfileImage = notification.sender && notification.sender.profile_image
+            ? getFullImageUrl(notification.sender.profile_image)
+            : DEFAULT_PROFILE_IMAGE;
         
         const li = document.createElement('li');
         li.innerHTML = `
             <div class="list-group-item list-group-item-action rounded d-flex border-0 mb-1 p-3">
                 <div class="avatar text-center d-none d-sm-inline-block">
-                    <img class="avatar-img rounded-circle" src="${getFullImageUrl(senderProfileImage)}" alt="">
+                    <img class="avatar-img rounded-circle" 
+                         src="${senderProfileImage}" 
+                         alt="프로필 이미지"
+                         onerror="this.src='${DEFAULT_PROFILE_IMAGE}'">
                 </div>
                 <div class="ms-sm-3 d-flex">
                     <div>
-                        <p class="small mb-2">${notification.message || '알림 내용이 없습니다.'}</p>
+                        <p class="small mb-2">
+                            ${notification.message || '알림 내용이 없습니다.'}
+                        </p>
                         <p class="small ms-3">${new Date(notification.created_at).toLocaleString()}</p>
                     </div>
                     <button class="btn btn-sm btn-danger-soft ms-auto" onclick="deleteNotification('${notification.id}')">삭제</button>
@@ -254,6 +269,7 @@ function renderNotifications() {
     updateNotificationCount();
 }
 
+// Notification 가져오기 함수
 async function fetchNotifications() {
     try {
         const response = await fetchWithAuth(`${API_BASE_URL}/notifications/`);
@@ -341,6 +357,7 @@ async function init() {
     }
 }
 
+// WebSocket 메시지 처리 부분
 function setupWebSocket(userId) {
     if (!userId) {
         const currentUser = getCurrentUser();
@@ -357,22 +374,29 @@ function setupWebSocket(userId) {
     
     const socket = new WebSocket(wsUrl);
 
-    socket.onopen = function(e) {
-        console.log('WebSocket connection established');
-    };
-
     socket.onmessage = function(e) {
         try {
             const data = JSON.parse(e.data);
             console.log('Received WebSocket message:', data);
-            if (data.notification) {  // 백엔드의 메시지 포맷에 맞춤
+            if (data.notification) {
+                // 새로운 알림의 이미지 URL 처리
+                if (data.notification.sender && data.notification.sender.profile_image) {
+                    data.notification.sender.profile_image = getFullImageUrl(data.notification.sender.profile_image);
+                }
                 notifications.unshift(data.notification);
                 renderNotifications();
-                // 알림음 재생이나 토스트 메시지 표시 등 추가 가능
+                
+                // 새 알림 토스트 메시지 표시
+                showToast('새로운 알림이 도착했습니다.', 'info');
             }
         } catch (error) {
             console.error('Error processing WebSocket message:', error);
         }
+    };
+
+    // 나머지 WebSocket 이벤트 핸들러는 동일하게 유지
+    socket.onopen = function(e) {
+        console.log('WebSocket connection established');
     };
 
     socket.onclose = function(e) {
@@ -381,16 +405,13 @@ function setupWebSocket(userId) {
         } else {
             console.log('WebSocket connection died');
         }
-        // 재연결 시도 전에 연결 상태 확인
-        if (!document.hidden) {  // 페이지가 보이는 상태일 때만 재연결
+        if (!document.hidden) {
             setTimeout(() => setupWebSocket(userId), 5000);
         }
     };
 
     socket.onerror = function(e) {
         console.error('WebSocket error occurred:', e);
-        console.log('WebSocket readyState:', socket.readyState);
-        console.log('WebSocket URL:', socket.url);
     };
 
     return socket;
