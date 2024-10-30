@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 body: JSON.stringify(jsonData),
             });
-
+        
             if (!registerResponse.ok) {
                 const errorData = await registerResponse.json();
                 const errorMessages = Object.entries(errorData)
@@ -61,13 +61,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     .join(' ');
                 throw new Error(errorMessages);
             }
-
+        
+            console.log('회원가입 성공!'); // 디버깅용
+        
             // 회원가입 성공 후 자동 로그인 요청
             const loginData = {
                 email: formData.get('email'),
-                password: formData.get('password1')  // password1을 사용하도록 수정
+                password: formData.get('password1')
             };        
-
+        
             const loginResponse = await fetch('http://127.0.0.1:8000/api/token/', {
                 method: 'POST',
                 headers: {
@@ -75,20 +77,41 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 body: JSON.stringify(loginData),
             });
-
+        
             if (!loginResponse.ok) {
                 throw new Error('로그인 중 오류가 발생했습니다.');
             }
-
+        
             const tokens = await loginResponse.json();
+            console.log('토큰 받아옴:', tokens);
             
             // JWT 토큰을 로컬 스토리지에 저장
-            localStorage.setItem('access_token', tokens.access);
-            localStorage.setItem('refresh_token', tokens.refresh);
+            localStorage.setItem('jwt_token', tokens.access);
 
+            // 사용자 정보 요청 추가
+            const userResponse = await fetch('http://127.0.0.1:8000/accounts/current-user/', {
+                headers: {
+                    'Authorization': `Bearer ${tokens.access}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!userResponse.ok) {
+                throw new Error('사용자 정보를 가져오는데 실패했습니다.');
+            }
+
+            const userData = await userResponse.json();
+
+            // 사용자 정보를 localStorage에 저장
+            localStorage.setItem('user', JSON.stringify({
+                uuid: userData.id,
+                email: userData.email,
+                username: userData.username,
+                profile_image: userData.profile_image
+            }));
+        
             alert('회원가입에 성공했습니다!');
             
-            // 메인 페이지로 리다이렉트
             window.location.href = '/templates/index.html';
         } catch (error) {
             console.error('회원가입 오류:', error);

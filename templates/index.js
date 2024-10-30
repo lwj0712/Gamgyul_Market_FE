@@ -420,7 +420,7 @@ document.addEventListener('DOMContentLoaded', function() {
     async function init() {
         // JWT 토큰이 없으면 로그인 페이지로 리다이렉트
         if (!getJWTToken()) {
-            window.location.href = '/login.html';
+            window.location.href = '/templates/login.html';
             return;
         }
 
