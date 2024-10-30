@@ -445,10 +445,10 @@ document.addEventListener('DOMContentLoaded', function() {
         recommendationPage++;
         const startIndex = (recommendationPage - 1) * recommendationsPerPage;
         const endIndex = startIndex + recommendationsPerPage;
-        const moreRecommendations = allRecommendations.slice(startIndex, endIndex);
+        const moreRecommendations = allRecommendations.slice(0, endIndex); // 처음부터 현재 페이지까지의 모든 추천
         
         if (moreRecommendations.length > 0) {
-            displayFriendRecommendations([...friendRecommendations.querySelectorAll('.hstack'), ...moreRecommendations]);
+            displayFriendRecommendations(moreRecommendations);
             addEventListeners();
         }
         
