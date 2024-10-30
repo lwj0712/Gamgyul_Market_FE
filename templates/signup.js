@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function() {
         errorMessage.textContent = '';
 
         if (password.value !== confirmPassword.value) {
-            errorMessage.textContent = "비밀번호가 일치하지 않습니다.";
+            alert("비밀번호가 일치하지 않습니다.");
             return;
         }
 
@@ -30,16 +30,8 @@ document.addEventListener('DOMContentLoaded', function() {
             username: formData.get('username'),
             email: formData.get('email'),
             password1: formData.get('password1'),
-            password2: formData.get('password2'),
-            bio: formData.get('bio') || ''
+            password2: formData.get('password2')
         };
-
-        const profileImage = formData.get('profile_image');
-        if (profileImage && profileImage.size > 0) {
-            const imageFormData = new FormData();
-            // 먼저 회원가입을 진행하고, 이미지는 별도로 업로드하는 로직이 필요할 수 있습니다
-            imageFormData.append('profile_image', profileImage);
-        }
 
         try {
             // 회원가입 요청
@@ -62,8 +54,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error(errorMessages);
             }
         
-            console.log('회원가입 성공!'); // 디버깅용
-        
             // 회원가입 성공 후 자동 로그인 요청
             const loginData = {
                 email: formData.get('email'),
@@ -79,11 +69,11 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         
             if (!loginResponse.ok) {
+                alert('로그인 중 오류가 발생했습니다.');
                 throw new Error('로그인 중 오류가 발생했습니다.');
             }
         
             const tokens = await loginResponse.json();
-            console.log('토큰 받아옴:', tokens);
             
             // JWT 토큰을 로컬 스토리지에 저장
             localStorage.setItem('jwt_token', tokens.access);
@@ -97,6 +87,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             if (!userResponse.ok) {
+                alert('사용자 정보를 가져오는데 실패했습니다.');
                 throw new Error('사용자 정보를 가져오는데 실패했습니다.');
             }
 
@@ -106,15 +97,14 @@ document.addEventListener('DOMContentLoaded', function() {
             localStorage.setItem('user', JSON.stringify({
                 uuid: userData.id,
                 email: userData.email,
-                username: userData.username,
-                profile_image: userData.profile_image
+                username: userData.username
             }));
         
             alert('회원가입에 성공했습니다!');
             
             window.location.href = '/templates/index.html';
         } catch (error) {
-            console.error('회원가입 오류:', error);
+            alert(error.message || '회원가입 중 오류가 발생했습니다.');
             errorMessage.textContent = error.message || '회원가입 중 오류가 발생했습니다.';
         }
     });
