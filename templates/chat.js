@@ -75,7 +75,6 @@ function getFullImageUrl(imageUrl) {
 
 function showErrorMessage(message) {
     console.error(message);
-    // TODO: Implement UI error message display
 }
 
 // Chat Functions
@@ -102,11 +101,39 @@ async function getChatRooms() {
     }
 }
 
-function displayChatRooms(chatRooms) {
+// 긴 텍스트 자름
+function truncateText(text, maxLength = 30) {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength - 3) + '...';
+}
+
+// displayChatRooms 함수 내에서 사용
+async function displayChatRooms(chatRooms) {
     const chatListContainer = document.querySelector('#chat-list ul');
     chatListContainer.innerHTML = '';
 
-    chatRooms.forEach((room, index) => {
+    const roomPromises = chatRooms.map(async (room) => {
+        try {
+            const response = await fetchWithAuth(`${API_BASE_URL}/chats/chatrooms/${room.id}/messages/`);
+            if (!response) return { ...room, lastMessage: 'No messages yet' };
+            
+            const data = await response.json();
+            const messages = data.results || data;
+            
+            const lastMessage = Array.isArray(messages) && messages.length > 0 
+                ? messages[messages.length - 1].content 
+                : 'No messages yet';
+            
+            return { ...room, lastMessage };
+        } catch (error) {
+            console.error('Error fetching messages for room:', room.id, error);
+            return { ...room, lastMessage: 'No messages yet' };
+        }
+    });
+
+    const roomsWithMessages = await Promise.all(roomPromises);
+
+    roomsWithMessages.forEach((room, index) => {
         const isActive = index === 0 ? 'active' : '';
         const roomElement = document.createElement('li');
         roomElement.setAttribute('data-bs-dismiss', 'offcanvas');
@@ -119,11 +146,12 @@ function displayChatRooms(chatRooms) {
         roomElement.innerHTML = `
             <a href="#chat-${room.id}" class="nav-link ${isActive} text-start" id="chat-${room.id}-tab" data-bs-toggle="pill" role="tab">
                 <div class="d-flex">
-                    <div class="flex-shrink-0 avatar avatar-story me-2 status-online">
+                    <div class="flex-shrink-0 avatar avatar-story me-2">
                         <img class="avatar-img rounded-circle" src="${profileImage}" alt="${username}">
                     </div>
                     <div class="flex-grow-1 d-block">
                         <h6 class="mb-0 mt-1">${username}</h6>
+                        <p class="small text-muted mb-0">${truncateText(room.lastMessage)}</p>
                     </div>
                 </div>
             </a>
