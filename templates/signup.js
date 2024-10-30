@@ -1,3 +1,5 @@
+const API_BASE_URL = 'http://127.0.0.1:8000';
+
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('signup-form');
     const errorMessage = document.getElementById('error-message');
@@ -35,7 +37,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             // 회원가입 요청
-            const registerResponse = await fetch('http://127.0.0.1:8000/accounts/registration/', {
+            const registerResponse = await fetch(`${API_BASE_URL}/accounts/registration/`, {
                 method: 'POST',
                 credentials: 'include',
                 headers: {
@@ -60,7 +62,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 password: formData.get('password1')
             };        
         
-            const loginResponse = await fetch('http://127.0.0.1:8000/api/token/', {
+            const loginResponse = await fetch(`${API_BASE_URL}/api/token/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -79,7 +81,7 @@ document.addEventListener('DOMContentLoaded', function() {
             localStorage.setItem('jwt_token', tokens.access);
 
             // 사용자 정보 요청 추가
-            const userResponse = await fetch('http://127.0.0.1:8000/accounts/current-user/', {
+            const userResponse = await fetch(`${API_BASE_URL}/accounts/current-user/`, {
                 headers: {
                     'Authorization': `Bearer ${tokens.access}`,
                     'Content-Type': 'application/json'
@@ -117,7 +119,7 @@ const authUtils = {
         const refresh_token = localStorage.getItem('refresh_token');
         
         try {
-            const response = await fetch('http://127.0.0.1:8000/api/token/refresh/', {
+            const response = await fetch(`${API_BASE_URL}/api/token/refresh/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -154,6 +156,6 @@ const authUtils = {
     logout() {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
-        window.location.href = '/login.html';
+        window.location.href = '/templates/login.html';
     }
 };
