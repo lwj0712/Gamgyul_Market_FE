@@ -35,7 +35,7 @@ function getCurrentUser() {
 
 // Modified fetch wrapper with JWT authentication
 async function fetchWithAuth(url, method = 'GET', body = null) {
-    const token = getJWTToken();
+    const token = getToken();
     if (!token && !url.includes('/login/')) {
         window.location.href = '/templates/login.html';
         return null;
@@ -63,14 +63,6 @@ async function fetchWithAuth(url, method = 'GET', body = null) {
     }
 
     return response;
-}
-
-function getFullImageUrl(imageUrl) {
-    if (!imageUrl) return DEFAULT_PROFILE_IMAGE;
-    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-        return imageUrl;
-    }
-    return `${API_BASE_URL}${imageUrl}`;
 }
 
 function showErrorMessage(message) {
@@ -215,7 +207,7 @@ function setupChatWebSocket(roomId) {
         socket.close();
     }
     
-    const token = getJWTToken();
+    const token = getToken();
     if (!token) {
         console.error('No JWT token available for WebSocket connection');
         return;
@@ -431,14 +423,14 @@ async function handleMessageSearch() {
     const query = document.getElementById('messageSearchInput').value.trim();
     if (query && currentRoomId) {
         try {
-            const response = await fetchWithCSRF(`${API_BASE_URL}/chats/${currentRoomId}/messages/search/?q=${encodeURIComponent(query)}`);
-            if (response && (Array.isArray(response.results) || Array.isArray(response))) {
-                displayMessageSearchResults(Array.isArray(response) ? response : response.results);
-            } else if (response && response.message) {
-                displayMessageSearchResults([]);
+            const response = await fetchWithCSRF(`${API_BASE_URL}/search/chatrooms/${currentRoomId}/messages/?q=${encodeURIComponent(query)}`);
+            console.log('Search response:', response);
+            
+            if (response) {
+                const results = Array.isArray(response) ? response : (response.results || []);
+                displayMessageSearchResults(results);
             } else {
-                console.error('Unexpected message search results format:', response);
-                showErrorMessage('검색 결과 형식이 올바르지 않습니다.');
+                displayMessageSearchResults([]);
             }
         } catch (error) {
             console.error('Message search error:', error);
@@ -462,12 +454,22 @@ function displayMessageSearchResults(results) {
     }
 
     results.forEach(message => {
+        console.log('Search result message:', message);
+        
+        // 백엔드에서 오는 username을 sender 객체로 변환
+        const senderObject = {
+            username: message.username,
+            id: null,  // ID는 검색 결과에 포함되지 않음
+            profile_image: null  // 프로필 이미지는 검색 결과에 포함되지 않음
+        };
+
         addMessage({
+            id: message.id,
             content: message.content,
-            sender: message.sender,
-            image: message.image,
+            sender: senderObject,
+            image: null,  // 이미지는 검색 결과에 포함되지 않음
             sent_at: message.sent_at,
-            is_read: message.is_read
+            is_read: null  // is_read는 검색 결과에 포함되지 않음
         });
     });
 
