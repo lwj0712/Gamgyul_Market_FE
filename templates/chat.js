@@ -1,6 +1,7 @@
 let currentRoomId;
 let socket;
 let fileInput;
+let displayChatRoomsCallCount = 0;
 
 function getToken() {
     return localStorage.getItem('jwt_token');
@@ -71,6 +72,9 @@ function showErrorMessage(message) {
 
 // Chat Functions
 async function getChatRooms() {
+    console.log('getChatRooms called');
+    console.trace('getChatRooms call stack');
+
     try {
         const response = await fetchWithAuth(`${API_BASE_URL}/chats/chatrooms/`);
         if (!response) return;
@@ -82,7 +86,13 @@ async function getChatRooms() {
         const chatRooms = data.results || data;
         
         if (Array.isArray(chatRooms)) {
-            displayChatRooms(chatRooms);
+            // 중복 호출 방지를 위해 채팅방 목록 컨테이너를 먼저 비움
+            const chatListContainer = document.querySelector('#chat-list ul');
+            if (chatListContainer) {
+                chatListContainer.innerHTML = '';
+            }
+            
+            await displayChatRooms(chatRooms);
         } else {
             console.error('Unexpected response format:', data);
             throw new Error('Invalid response format for chat rooms');
@@ -113,24 +123,87 @@ function getLastMessagePreview(message) {
 }
 
 async function displayChatRooms(chatRooms) {
+    displayChatRoomsCallCount++;
+    console.log(`displayChatRooms called ${displayChatRoomsCallCount} times`);
+    console.trace('displayChatRooms call stack');  // 호출 스택 출력
+
     const chatListContainer = document.querySelector('#chat-list ul');
+    if (!chatListContainer) {
+        console.error('Chat list container not found');
+        return;
+    }
+
+    // 이미 처리 중인지 확인
+    if (chatListContainer.getAttribute('data-loading') === 'true') {
+        console.log('Already loading chat rooms, skipping...');
+        return;
+    }
+
+    // 처리 시작 표시
+    chatListContainer.setAttribute('data-loading', 'true');
     chatListContainer.innerHTML = '';
+
+    console.log('Received chat rooms:', chatRooms);
 
     const roomPromises = chatRooms.map(async (room) => {
         try {
-            const response = await fetchWithAuth(`${API_BASE_URL}/chats/chatrooms/${room.id}/messages/`);
-            if (!response) return { ...room, lastMessage: null };
+            // 메시지 가져오기
+            const messageResponse = await fetchWithAuth(`${API_BASE_URL}/chats/chatrooms/${room.id}/messages/`);
+            if (!messageResponse) return { ...room, lastMessage: null };
             
-            const data = await response.json();
-            const messages = data.results || data;
-            
+            const messageData = await messageResponse.json();
+            const messages = messageData.results || messageData;
             const lastMessage = Array.isArray(messages) && messages.length > 0 
-                ? messages[messages.length - 1]  // 전체 메시지 객체를 저장
+                ? messages[messages.length - 1]
                 : null;
+
+            // 현재 사용자의 username
+            const currentUsername = getCurrentUsername();
             
-            return { ...room, lastMessage };
+            // participants 배열에서 상대방 username 찾기
+            const otherUsername = room.participants.find(username => username !== currentUsername);
+            
+            // 사용자 목록 API를 통해 username으로 UUID 찾기
+            if (otherUsername) {
+                try {
+                    // 먼저 사용자의 UUID를 찾기 위한 API 호출
+                    const userResponse = await fetchWithAuth(`${API_BASE_URL}/accounts/user/${otherUsername}/`);
+                    if (userResponse && userResponse.ok) {
+                        const userData = await userResponse.json();
+                        console.log('User Data:', userData);
+                        
+                        // UUID로 프로필 정보 가져오기
+                        const profileResponse = await fetchWithAuth(`${API_BASE_URL}/profiles/profile/${userData.id}/`);
+                        if (profileResponse && profileResponse.ok) {
+                            const profileData = await profileResponse.json();
+                            console.log('Profile Data:', profileData);
+                            
+                            return {
+                                ...room,
+                                lastMessage,
+                                otherUser: {
+                                    username: otherUsername,
+                                    profile_image: profileData.profile_image,
+                                    uuid: userData.id
+                                }
+                            };
+                        }
+                    }
+                } catch (profileError) {
+                    console.error('Error fetching user profile:', profileError);
+                }
+            }
+            
+            return { 
+                ...room, 
+                lastMessage,
+                otherUser: {
+                    username: otherUsername,
+                    profile_image: null
+                }
+            };
         } catch (error) {
-            console.error('Error fetching messages for room:', room.id, error);
+            console.error('Error fetching room data:', error);
             return { ...room, lastMessage: null };
         }
     });
@@ -142,32 +215,52 @@ async function displayChatRooms(chatRooms) {
         const roomElement = document.createElement('li');
         roomElement.setAttribute('data-bs-dismiss', 'offcanvas');
 
-        const participants = room.participants || [];
-        const otherUser = participants.find(user => user.username !== getCurrentUsername()) || {};
-        const username = otherUser.username || room.name || 'Unknown User';
-        const profileImage = otherUser.profile_image ? getFullImageUrl(otherUser.profile_image) : DEFAULT_PROFILE_IMAGE;
+        const otherUser = room.otherUser || {};
+        const username = otherUser.username || room.name.split(',')[0].trim();
+        let profileImage = DEFAULT_PROFILE_IMAGE;
 
-        // 마지막 메시지 미리보기 생성
+        if (otherUser.profile_image) {
+            profileImage = getFullImageUrl(otherUser.profile_image);
+            console.log('Profile image URL:', profileImage);
+        }
+
         const lastMessagePreview = getLastMessagePreview(room.lastMessage);
 
         roomElement.innerHTML = `
-            <a href="#chat-${room.id}" class="nav-link ${isActive} text-start" id="chat-${room.id}-tab" data-bs-toggle="pill" role="tab">
-                <div class="d-flex">
-                    <div class="flex-shrink-0 avatar avatar-story me-2">
-                        <img class="avatar-img rounded-circle" src="${profileImage}" alt="${username}">
+            <a href="#chat-${room.id}" class="nav-link ${isActive} text-start p-3" id="chat-${room.id}-tab" data-bs-toggle="pill" role="tab">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 position-relative">
+                        <img class="avatar-img rounded-circle" 
+                             src="${profileImage}" 
+                             alt="${username}"
+                             style="width: 50px; height: 50px; object-fit: cover;"
+                             onerror="this.src='${DEFAULT_PROFILE_IMAGE}'; this.onerror=null;">
                     </div>
-                    <div class="flex-grow-1 d-block">
-                        <h6 class="mb-0 mt-1">${username}</h6>
+                    <div class="flex-grow-1 ms-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">${username}</h6>
+                            ${room.lastMessage ? `
+                                <small class="text-muted">
+                                    ${formatDate(room.lastMessage.sent_at).split(' ')[1]}
+                                </small>
+                            ` : ''}
+                        </div>
                         <p class="small text-muted mb-0">${truncateText(lastMessagePreview)}</p>
-                        ${room.lastMessage ? `
-                            <small class="text-muted">
-                                ${formatDate(room.lastMessage.sent_at).split(' ')[1]}
-                            </small>
-                        ` : ''}
                     </div>
                 </div>
             </a>
         `;
+        
+        // 프로필 페이지로 이동하는 이벤트 추가
+        const profileImg = roomElement.querySelector('.avatar-img');
+        profileImg.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (otherUser.uuid) {
+                window.location.href = `/templates/profile.html?uuid=${otherUser.uuid}`;
+            }
+        });
+
         roomElement.addEventListener('click', () => openChatRoom(room.id));
         chatListContainer.appendChild(roomElement);
     });
@@ -622,82 +715,121 @@ function debounce(func, wait) {
 
 // Event Listeners
 document.addEventListener('DOMContentLoaded', function() {
+    // 이전에 등록된 이벤트 리스너 제거
+    const existingListeners = document.querySelectorAll('[data-event-attached]');
+    existingListeners.forEach(element => {
+        element.replaceWith(element.cloneNode(true));
+    });
+    
     const userSearchInput = document.getElementById('userSearchInput');
     const messageForm = document.getElementById('message-form');
     const messageInput = document.getElementById('message-input');
     const messageSearchInput = document.getElementById('messageSearchInput');
 
-    messageSearchInput.addEventListener('input', debounce(handleMessageSearch, 300));
-    userSearchInput.addEventListener('input', debounce(handleSearch, 300));
+    // 이벤트 리스너 등록 표시
+    [userSearchInput, messageForm, messageInput, messageSearchInput].forEach(element => {
+        if (element) element.setAttribute('data-event-attached', 'true');
+    });
+
+    messageSearchInput?.addEventListener('input', debounce(handleMessageSearch, 300));
+    userSearchInput?.addEventListener('input', debounce(handleSearch, 300));
     
-    // 메시지 전송 이벤트 핸들러
-    messageForm.addEventListener('submit', function(e) {
+    messageForm?.addEventListener('submit', function(e) {
         e.preventDefault();
         const messageInput = document.getElementById('message-input');
         if (messageInput.value.trim()) {
             sendMessage(messageInput.value);
-            messageInput.value = ''; // 메시지 전송 후 입력 필드 초기화
+            messageInput.value = '';
         }
     });
 
-    // 메시지 입력 필드에서 Enter 키 처리
-    messageInput.addEventListener('keypress', function(e) {
+    messageInput?.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
-            e.preventDefault(); // 기본 submit 동작 방지
+            e.preventDefault();
             if (messageInput.value.trim()) {
                 sendMessage(messageInput.value);
-                messageInput.value = ''; // 메시지 전송 후 입력 필드 초기화
+                messageInput.value = '';
             }
         }
     });
 
-    // Create hidden file input
-    createFileInput();
+    // Create hidden file input (한 번만 생성)
+    if (!document.querySelector('input[type="file"][data-chat-file-input]')) {
+        createFileInput();
+    }
 
     // 이미지 업로드 버튼 이벤트 핸들러
-    const attachButton = document.querySelector('.fa-paperclip').parentElement;
-    attachButton.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation(); // 이벤트 전파 중단
-        fileInput.click();
-    });
+    const attachButton = document.querySelector('.fa-paperclip')?.parentElement;
+    if (attachButton) {
+        attachButton.setAttribute('data-event-attached', 'true');
+        attachButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            fileInput.click();
+        });
+    }
 
+    // 검색 결과 클릭 이벤트
     document.addEventListener('click', function(event) {
         if (!event.target.closest('#searchResults') && !event.target.closest('#userSearchInput')) {
-            document.getElementById('searchResults').style.display = 'none';
+            const searchResults = document.getElementById('searchResults');
+            if (searchResults) searchResults.style.display = 'none';
         }
     });
 
+    // 메시지 검색 폼 이벤트
     const messageSearchForm = document.getElementById('message-search-container');
-    messageSearchForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        handleMessageSearch();
-    });
+    if (messageSearchForm) {
+        messageSearchForm.setAttribute('data-event-attached', 'true');
+        messageSearchForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            handleMessageSearch();
+        });
+    }
 
-    // Initialize chat functionality
-    initChat();
+    // 채팅 초기화 (한 번만 실행)
+    if (!window.chatInitialized) {
+        window.chatInitialized = true;
+        initChat();
+    }
 });
 
 // Update initialization function
 async function initChat() {
+    console.log('initChat called');
+    console.trace('initChat call stack');  // 호출 스택 출력
+
+    // 이미 초기화 중인지 확인
+    if (window.initializingChat) {
+        console.log('Chat initialization already in progress');
+        return;
+    }
+
+    window.initializingChat = true;
+
     try {
-        if (!getJWTToken()) {
+        // JWT 토큰 확인
+        const token = getToken();
+        if (!token) {
             window.location.href = '/templates/login.html';
             return;
         }
 
+        // 현재 사용자 정보 가져오기
         const userResponse = await fetchWithAuth(`${API_BASE_URL}/accounts/current-user/`);
         if (!userResponse) return;
 
         const userData = await userResponse.json();
         if (userData) {
             currentUserId = userData.id;
+            
+            // 채팅방 목록 가져오기 (한 번만 호출)
             await getChatRooms();
             
             // 새로 생성된 채팅방이 있는지 확인하고 열기
             const lastCreatedChatRoomId = localStorage.getItem('lastCreatedChatRoomId');
             if (lastCreatedChatRoomId) {
-                openChatRoom(lastCreatedChatRoomId);
+                await openChatRoom(lastCreatedChatRoomId);
                 localStorage.removeItem('lastCreatedChatRoomId');
             }
         } else {
@@ -806,6 +938,3 @@ function updateMessageReadStatus(messageId, isRead) {
         }
     }
 }
-
-// Initialize the chat application
-initChat();
