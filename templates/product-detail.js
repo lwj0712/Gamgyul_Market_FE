@@ -39,7 +39,7 @@ async function fetchProductDetails() {
         if (profileImage && product.user_profile_image) {
             profileImage.src = product.user_profile_image;
         } else if (profileImage) {
-            profileImage.src = '/static/images/default-profile.png';
+            profileImage.src = DEFAULT_PROFILE_IMAGE;
         }
 
         displayProductDetails(product, currentUserId);
@@ -52,7 +52,7 @@ function displayProductDetails(product, currentUserId) {
     const profileImage = document.querySelector('.avatar.avatar-story.me-2');
     if (profileImage) {
         profileImage.innerHTML = `
-            <img src="${product.user_profile_image || '/static/images/default-profile.png'}" 
+            <img src="${product.user_profile_image || DEFAULT_PROFILE_IMAGE}" 
                  class="avatar-img rounded-circle" 
                  alt="${product.username}'s profile">
         `;

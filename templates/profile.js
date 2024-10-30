@@ -257,14 +257,32 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Post and Product Functions
-    function renderPostList(posts) {
+    async function renderPostList(posts) {
         if (!postList) return;
         if (posts && posts.length > 0) {
-            postList.innerHTML = posts.map(post => {
+            // 모든 포스트의 댓글을 가져오는 Promise 배열 생성
+            const postsWithComments = await Promise.all(posts.map(async post => {
+                try {
+                    const response = await fetchWithAuth(`${API_BASE_URL}/comments/posts/${post.id}/comments/`);
+                    if (!response.ok) throw new Error('Failed to fetch comments');
+                    const comments = await response.json();
+                    return {
+                        ...post,
+                        commentsCount: comments ? comments.length : 0
+                    };
+                } catch (error) {
+                    console.error('Error fetching comments for post:', post.id, error);
+                    return {
+                        ...post,
+                        commentsCount: 0
+                    };
+                }
+            }));
+    
+            postList.innerHTML = postsWithComments.map(post => {
                 const images = post.images || [];
                 const imageUrl = images.length > 0 ? getFullImageUrl(images[0]) : DEFAULT_PROFILE_IMAGE;
-                const commentsCount = post.comments ? post.comments.length : 0;
-
+    
                 return `
                     <div class="col-sm-6 col-lg-4">
                         <div class="card h-100 post-card" 
@@ -281,7 +299,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <i class="bi bi-heart-fill me-1"></i>${post.likes_count || 0}
                                     </li>
                                     <li class="nav-item ms-sm-auto">
-                                        <i class="bi bi-chat-left-text-fill me-1"></i>${commentsCount}
+                                        <i class="bi bi-chat-left-text-fill me-1"></i>${post.commentsCount}
                                     </li>
                                 </ul>
                             </div>
