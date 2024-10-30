@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', function() {
             imageWrapper.className = 'image-wrapper';
             imageWrapper.innerHTML = `
                 <img src="${imageUrl}" style="width:100px; height:100px;">
-                <input type="checkbox" name="images_to_delete" value="${imageUrl}" id="delete-image-${index}">
+                <input type="checkbox" name="images_to_delete[]" value="${imageUrl}" id="delete-image-${index}">
                 <label for="delete-image-${index}">삭제</label>
             `;
             imageContainer.appendChild(imageWrapper);
@@ -79,8 +79,13 @@ document.addEventListener('DOMContentLoaded', function() {
         ['name', 'price', 'description', 'stock', 'variety', 'growing_region', 'harvest_date']
             .forEach(field => formData.append(field, getValue(field)));
 
-        document.querySelectorAll('input[name="images_to_delete"]:checked')
-            .forEach(checkbox => formData.append('images_to_delete', checkbox.value));
+        // 수정된 부분: 체크된 이미지들을 배열로 처리
+        const imagesToDelete = Array.from(document.querySelectorAll('input[name="images_to_delete[]"]:checked'))
+            .map(checkbox => checkbox.value);
+        
+        imagesToDelete.forEach(imageUrl => {
+            formData.append('images_to_delete', imageUrl);
+        });
 
         if (imageInput.files) {
             Array.from(imageInput.files).slice(0, 5).forEach(file => formData.append('image', file));
