@@ -220,6 +220,30 @@ function setupChatWebSocket(roomId) {
     };
 }
 
+// 날짜 포맷팅 유틸리티 함수 추가
+function formatDate(dateString) {
+    if (!dateString) return 'Unknown Date';
+    
+    try {
+        const date = new Date(dateString);
+        
+        // UTC 시간을 그대로 사용
+        const hours = String(date.getUTCHours()).padStart(2, '0');
+        const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+        const seconds = String(date.getUTCSeconds()).padStart(2, '0');
+        
+        // 날짜 부분도 UTC 기준으로
+        const year = date.getUTCFullYear();
+        const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(date.getUTCDate()).padStart(2, '0');
+        
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    } catch (error) {
+        console.error('Error formatting date:', error);
+        return 'Invalid Date';
+    }
+}
+
 function addMessage({ id, content, sender, image, sent_at, is_read }) {
     console.log('Adding message:', { id, content, sender, image, sent_at, is_read });
     const messagesContainer = document.getElementById('messages');
@@ -227,7 +251,7 @@ function addMessage({ id, content, sender, image, sent_at, is_read }) {
     const isSentByCurrentUser = sender && sender.id === currentUserId;
     messageElement.className = `d-flex ${isSentByCurrentUser ? 'justify-content-end' : 'justify-content-start'} mb-3`;
     
-    const formattedDate = sent_at ? new Date(sent_at).toLocaleString() : 'Unknown Date';
+    const formattedDate = formatDate(sent_at);
     
     const readStatusIcon = isSentByCurrentUser ? 
     `<i class="bi ${is_read ? 'bi-check-all text-primary' : 'bi-check'} ms-1"></i>` : '';
@@ -254,7 +278,6 @@ function addMessage({ id, content, sender, image, sent_at, is_read }) {
     `;
     
     messagesContainer.appendChild(messageElement);
-    console.log('Message added to DOM');
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
 
