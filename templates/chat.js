@@ -35,7 +35,7 @@ function getCurrentUser() {
 
 // Modified fetch wrapper with JWT authentication
 async function fetchWithAuth(url, method = 'GET', body = null) {
-    const token = getJWTToken();
+    const token = getToken();
     if (!token && !url.includes('/login/')) {
         window.location.href = '/templates/login.html';
         return null;
@@ -65,17 +65,8 @@ async function fetchWithAuth(url, method = 'GET', body = null) {
     return response;
 }
 
-function getFullImageUrl(imageUrl) {
-    if (!imageUrl) return DEFAULT_PROFILE_IMAGE;
-    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-        return imageUrl;
-    }
-    return `${API_BASE_URL}${imageUrl}`;
-}
-
 function showErrorMessage(message) {
     console.error(message);
-    // TODO: Implement UI error message display
 }
 
 // Chat Functions
@@ -102,11 +93,39 @@ async function getChatRooms() {
     }
 }
 
-function displayChatRooms(chatRooms) {
+// 긴 텍스트 자름
+function truncateText(text, maxLength = 30) {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength - 3) + '...';
+}
+
+// displayChatRooms 함수 내에서 사용
+async function displayChatRooms(chatRooms) {
     const chatListContainer = document.querySelector('#chat-list ul');
     chatListContainer.innerHTML = '';
 
-    chatRooms.forEach((room, index) => {
+    const roomPromises = chatRooms.map(async (room) => {
+        try {
+            const response = await fetchWithAuth(`${API_BASE_URL}/chats/chatrooms/${room.id}/messages/`);
+            if (!response) return { ...room, lastMessage: 'No messages yet' };
+            
+            const data = await response.json();
+            const messages = data.results || data;
+            
+            const lastMessage = Array.isArray(messages) && messages.length > 0 
+                ? messages[messages.length - 1].content 
+                : 'No messages yet';
+            
+            return { ...room, lastMessage };
+        } catch (error) {
+            console.error('Error fetching messages for room:', room.id, error);
+            return { ...room, lastMessage: 'No messages yet' };
+        }
+    });
+
+    const roomsWithMessages = await Promise.all(roomPromises);
+
+    roomsWithMessages.forEach((room, index) => {
         const isActive = index === 0 ? 'active' : '';
         const roomElement = document.createElement('li');
         roomElement.setAttribute('data-bs-dismiss', 'offcanvas');
@@ -119,11 +138,12 @@ function displayChatRooms(chatRooms) {
         roomElement.innerHTML = `
             <a href="#chat-${room.id}" class="nav-link ${isActive} text-start" id="chat-${room.id}-tab" data-bs-toggle="pill" role="tab">
                 <div class="d-flex">
-                    <div class="flex-shrink-0 avatar avatar-story me-2 status-online">
+                    <div class="flex-shrink-0 avatar avatar-story me-2">
                         <img class="avatar-img rounded-circle" src="${profileImage}" alt="${username}">
                     </div>
                     <div class="flex-grow-1 d-block">
                         <h6 class="mb-0 mt-1">${username}</h6>
+                        <p class="small text-muted mb-0">${truncateText(room.lastMessage)}</p>
                     </div>
                 </div>
             </a>
@@ -187,7 +207,7 @@ function setupChatWebSocket(roomId) {
         socket.close();
     }
     
-    const token = getJWTToken();
+    const token = getToken();
     if (!token) {
         console.error('No JWT token available for WebSocket connection');
         return;
@@ -220,6 +240,30 @@ function setupChatWebSocket(roomId) {
     };
 }
 
+// 날짜 포맷팅 유틸리티 함수 추가
+function formatDate(dateString) {
+    if (!dateString) return 'Unknown Date';
+    
+    try {
+        const date = new Date(dateString);
+        
+        // UTC 시간을 그대로 사용
+        const hours = String(date.getUTCHours()).padStart(2, '0');
+        const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+        const seconds = String(date.getUTCSeconds()).padStart(2, '0');
+        
+        // 날짜 부분도 UTC 기준으로
+        const year = date.getUTCFullYear();
+        const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(date.getUTCDate()).padStart(2, '0');
+        
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    } catch (error) {
+        console.error('Error formatting date:', error);
+        return 'Invalid Date';
+    }
+}
+
 function addMessage({ id, content, sender, image, sent_at, is_read }) {
     console.log('Adding message:', { id, content, sender, image, sent_at, is_read });
     const messagesContainer = document.getElementById('messages');
@@ -227,7 +271,7 @@ function addMessage({ id, content, sender, image, sent_at, is_read }) {
     const isSentByCurrentUser = sender && sender.id === currentUserId;
     messageElement.className = `d-flex ${isSentByCurrentUser ? 'justify-content-end' : 'justify-content-start'} mb-3`;
     
-    const formattedDate = sent_at ? new Date(sent_at).toLocaleString() : 'Unknown Date';
+    const formattedDate = formatDate(sent_at);
     
     const readStatusIcon = isSentByCurrentUser ? 
     `<i class="bi ${is_read ? 'bi-check-all text-primary' : 'bi-check'} ms-1"></i>` : '';
@@ -254,7 +298,6 @@ function addMessage({ id, content, sender, image, sent_at, is_read }) {
     `;
     
     messagesContainer.appendChild(messageElement);
-    console.log('Message added to DOM');
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
 
@@ -380,14 +423,14 @@ async function handleMessageSearch() {
     const query = document.getElementById('messageSearchInput').value.trim();
     if (query && currentRoomId) {
         try {
-            const response = await fetchWithCSRF(`${API_BASE_URL}/chats/${currentRoomId}/messages/search/?q=${encodeURIComponent(query)}`);
-            if (response && (Array.isArray(response.results) || Array.isArray(response))) {
-                displayMessageSearchResults(Array.isArray(response) ? response : response.results);
-            } else if (response && response.message) {
-                displayMessageSearchResults([]);
+            const response = await fetchWithCSRF(`${API_BASE_URL}/search/chatrooms/${currentRoomId}/messages/?q=${encodeURIComponent(query)}`);
+            console.log('Search response:', response);
+            
+            if (response) {
+                const results = Array.isArray(response) ? response : (response.results || []);
+                displayMessageSearchResults(results);
             } else {
-                console.error('Unexpected message search results format:', response);
-                showErrorMessage('검색 결과 형식이 올바르지 않습니다.');
+                displayMessageSearchResults([]);
             }
         } catch (error) {
             console.error('Message search error:', error);
@@ -411,12 +454,22 @@ function displayMessageSearchResults(results) {
     }
 
     results.forEach(message => {
+        console.log('Search result message:', message);
+        
+        // 백엔드에서 오는 username을 sender 객체로 변환
+        const senderObject = {
+            username: message.username,
+            id: null,  // ID는 검색 결과에 포함되지 않음
+            profile_image: null  // 프로필 이미지는 검색 결과에 포함되지 않음
+        };
+
         addMessage({
+            id: message.id,
             content: message.content,
-            sender: message.sender,
-            image: message.image,
+            sender: senderObject,
+            image: null,  // 이미지는 검색 결과에 포함되지 않음
             sent_at: message.sent_at,
-            is_read: message.is_read
+            is_read: null  // is_read는 검색 결과에 포함되지 않음
         });
     });
 
