@@ -1,6 +1,6 @@
-// Global variables
 let currentRoomId;
 let socket;
+let fileInput;
 
 function getToken() {
     return localStorage.getItem('jwt_token');
@@ -269,24 +269,130 @@ function formatDate(dateString) {
     }
 }
 
+// Create hidden file input
+function createFileInput() {
+    fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.style.display = 'none';
+    fileInput.addEventListener('change', handleFileSelect);
+    document.body.appendChild(fileInput);
+}
+
+// Handle file selection
+async function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+        showErrorMessage('이미지 파일만 업로드 가능합니다.');
+        return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        showErrorMessage('이미지 크기는 5MB를 넘을 수 없습니다.');
+        return;
+    }
+
+    try {
+        await sendMessage(null, file);
+    } catch (error) {
+        console.error('Error uploading file:', error);
+        showErrorMessage('파일 업로드 중 오류가 발생했습니다.');
+    }
+}
+
+async function sendMessage(content = null, file = null) {
+    if (!currentRoomId) {
+        console.error('No chat room selected');
+        return;
+    }
+
+    try {
+        const formData = new FormData();
+        if (content) {
+            formData.append('content', content);
+        }
+        if (file) {
+            formData.append('image', file);
+        }
+
+        const token = getToken();
+        const response = await fetch(
+            `${API_BASE_URL}/chats/chatrooms/${currentRoomId}/messages/`,
+            {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('Server response:', data);
+
+        if (data && data.id) {
+            document.getElementById('message-input').value = '';
+            const currentUser = getCurrentUser();
+            
+            // Add the message to the chat
+            addMessage({
+                id: data.id,
+                content: data.content,
+                sender: {
+                    id: currentUser.id,
+                    username: currentUser.username,
+                    profile_image: currentUser.profile_image
+                },
+                image: data.image,
+                sent_at: data.sent_at,
+                is_read: false
+            });
+        }
+    } catch (error) {
+        console.error('Error sending message:', error);
+        showErrorMessage('메시지 전송 중 오류가 발생했습니다.');
+        throw error;
+    }
+}
+
 function addMessage({ id, content, sender, image, sent_at, is_read }) {
     console.log('Adding message:', { id, content, sender, image, sent_at, is_read });
     const messagesContainer = document.getElementById('messages');
     const messageElement = document.createElement('div');
     
-    // currentUser를 직접 가져와서 비교
     const currentUser = getCurrentUser();
     const isSentByCurrentUser = sender && currentUser && sender.username === currentUser.username;
     
     messageElement.className = `d-flex ${isSentByCurrentUser ? 'justify-content-end' : 'justify-content-start'} mb-3`;
     
     const formattedDate = formatDate(sent_at);
-    
     const readStatusIcon = isSentByCurrentUser ? 
-    `<i class="bi ${is_read ? 'bi-check-all text-primary' : 'bi-check'} ms-1"></i>` : '';
+        `<i class="bi ${is_read ? 'bi-check-all text-primary' : 'bi-check'} ms-1"></i>` : '';
 
     const senderUsername = sender ? (sender.username || 'Unknown') : 'Unknown';
     const senderProfileImage = sender ? getFullImageUrl(sender.profile_image) : DEFAULT_PROFILE_IMAGE;
+
+    // Prepare message content
+    let messageContent = '';
+    if (content) {
+        messageContent = `<p class="mb-0 ${isSentByCurrentUser ? 'text-dark' : ''}">${content}</p>`;
+    }
+    if (image) {
+        messageContent += `
+            <div class="message-image-container">
+                <img src="${image}" alt="Uploaded image" class="img-fluid rounded" style="max-width: 200px; cursor: pointer" 
+                    onclick="window.open('${image}', '_blank')">
+            </div>
+        `;
+    }
 
     messageElement.innerHTML = `
         <div class="d-flex ${isSentByCurrentUser ? 'flex-row-reverse' : 'flex-row'} align-items-start">
@@ -296,7 +402,7 @@ function addMessage({ id, content, sender, image, sent_at, is_read }) {
             <div class="card ${isSentByCurrentUser ? 'bg-warning-subtle' : 'bg-light'}">
                 <div class="card-body p-2">
                     <p class="small mb-0 ${isSentByCurrentUser ? 'text-dark' : ''}">${senderUsername}</p>
-                    <p class="mb-0 ${isSentByCurrentUser ? 'text-dark' : ''}">${content}</p>
+                    ${messageContent}
                     <div class="d-flex justify-content-between align-items-center">
                         <small class="${isSentByCurrentUser ? 'text-muted-dark' : 'text-muted'}">${formattedDate}</small>
                         ${isSentByCurrentUser ? readStatusIcon : ''}
@@ -308,46 +414,6 @@ function addMessage({ id, content, sender, image, sent_at, is_read }) {
     
     messagesContainer.appendChild(messageElement);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
-}
-
-async function sendMessage(content) {
-    if (!currentRoomId) {
-        console.error('No chat room selected');
-        return;
-    }
-
-    try {
-        console.log('Sending message:', content);
-        const response = await fetchWithAuth(
-            `${API_BASE_URL}/chats/chatrooms/${currentRoomId}/messages/`,
-            'POST',
-            { content }
-        );
-        
-        if (!response) return;
-        
-        const data = await response.json();
-        console.log('Server response:', data);        
-
-        if (data && data.id) {
-            document.getElementById('message-input').value = '';
-            const currentUser = getCurrentUser();
-            addMessage({
-                id: data.id,
-                content: content,
-                sender: {
-                    id: currentUser.id,
-                    username: currentUser.username,
-                    profile_image: currentUser.profile_image
-                },
-                sent_at: data.sent_at,
-                is_read: false
-            });
-        }
-    } catch (error) {
-        console.error('Error sending message:', error);
-        showErrorMessage('메시지 전송 중 오류가 발생했습니다.');
-    }
 }
 
 // Search Functions
@@ -515,6 +581,16 @@ document.addEventListener('DOMContentLoaded', function() {
         if (messageInput.value.trim()) {
             sendMessage(messageInput.value);
         }
+    });
+
+    // Create hidden file input
+    createFileInput();
+    
+    // Add click handler for attachment button
+    const attachButton = document.querySelector('.fa-paperclip').parentElement;
+    attachButton.addEventListener('click', function(e) {
+        e.preventDefault();
+        fileInput.click();
     });
 
     document.addEventListener('click', function(event) {
