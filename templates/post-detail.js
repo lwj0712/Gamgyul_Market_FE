@@ -64,13 +64,27 @@
                 if (!response) return;
                 
                 const data = await response.json();
-                displayPostDetail(data);
                 
                 // 현재 사용자가 게시물 작성자인지 확인
                 const currentUserId = getCurrentUserId();
-                if (currentUserId && data.user.id === currentUserId) {
-                    document.getElementById('post-actions').style.display = 'block';
+                if (currentUserId) {
+                    if (currentUserId === data.user.id) {
+                        // 작성자인 경우 수정/삭제 버튼 표시
+                        document.getElementById('post-actions').style.display = 'block';
+                    } else {
+                        // 작성자가 아닌 경우 신고 버튼 표시
+                        const reportButton = document.createElement('div');
+                        reportButton.className = 'mt-3';
+                        reportButton.innerHTML = `
+                            <button class="btn btn-warning btn-sm" onclick="window.location.href='/templates/report-form.html?content_type=posts.post&object_id=${postId}'">
+                                <i class="bi bi-exclamation-triangle"></i> 신고하기
+                            </button>
+                        `;
+                        document.getElementById('post-actions').after(reportButton);
+                    }
                 }
+                
+                displayPostDetail(data);
                 
                 // 댓글 별도 조회
                 const comments = await fetchComments(postId);
