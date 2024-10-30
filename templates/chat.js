@@ -462,26 +462,47 @@ async function handleSearch() {
 
 function displaySearchResults(results) {
     const searchResultsContainer = document.getElementById('searchResults');
+    const searchInput = document.getElementById('userSearchInput');
+    const inputRect = searchInput.getBoundingClientRect();
+    
     searchResultsContainer.innerHTML = '';
     searchResultsContainer.style.display = 'block';
+    
+    // 검색 입력창에 맞춘 스타일 적용
+    searchResultsContainer.style.maxHeight = '300px';
+    searchResultsContainer.style.overflowY = 'auto';
+    searchResultsContainer.style.position = 'absolute';
+    searchResultsContainer.style.top = '100%'; // 입력창 바로 아래
+    searchResultsContainer.style.left = '0';
+    searchResultsContainer.style.right = '0';
+    searchResultsContainer.style.backgroundColor = 'white';
+    searchResultsContainer.style.zIndex = '1000';
+    searchResultsContainer.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+    searchResultsContainer.style.borderRadius = '0 0 8px 8px';
+    searchResultsContainer.style.margin = '0';
+    searchResultsContainer.style.padding = '0';
+    searchResultsContainer.style.border = '1px solid #dee2e6';
+    searchResultsContainer.style.borderTop = 'none';
 
     if (!Array.isArray(results) || results.length === 0) {
-        searchResultsContainer.innerHTML = '<p>검색 결과가 없습니다.</p>';
+        searchResultsContainer.innerHTML = '<p class="p-3 m-0">검색 결과가 없습니다.</p>';
         return;
     }
 
     const resultsList = document.createElement('ul');
-    resultsList.className = 'nav flex-column nav-pills nav-pills-soft';
+    resultsList.className = 'nav flex-column nav-pills nav-pills-soft m-0 p-0';
+    resultsList.style.width = '100%';
 
     results.forEach(user => {
         const userElement = document.createElement('li');
+        userElement.className = 'border-bottom';
         userElement.innerHTML = `
-            <a href="#" class="nav-link text-start">
-                <div class="d-flex">
+            <a href="#" class="nav-link text-start px-3 py-2">
+                <div class="d-flex align-items-center">
                     <div class="flex-shrink-0 avatar avatar-story me-2">
                         <img class="avatar-img rounded-circle" src="${getFullImageUrl(user.profile_image)}" alt="${user.username}">
                     </div>
-                    <div class="flex-grow-1 d-block">
+                    <div class="flex-grow-1">
                         <h6 class="mb-0 mt-1">${user.username}</h6>
                         <div class="small text-secondary">Click to start chat</div>
                     </div>
@@ -497,15 +518,28 @@ function displaySearchResults(results) {
 
 async function startChatWithUser(user) {
     try {
-        const newChatRoom = await fetchWithAuth(
+        const response = await fetchWithAuth(
             `${API_BASE_URL}/chats/chatrooms/`,
             'POST',
             { participants: [user.username] }
         );
+
+        if (!response.ok) {
+            throw new Error('채팅방 생성에 실패했습니다.');
+        }
+
+        const newChatRoom = await response.json();
+        
         if (newChatRoom && newChatRoom.id) {
-            openChatRoom(newChatRoom.id);
+            // 검색 결과 숨기기 및 입력 필드 초기화
             document.getElementById('searchResults').style.display = 'none';
             document.getElementById('userSearchInput').value = '';
+            
+            // 페이지 새로고침 전에 채팅방 ID를 localStorage에 저장
+            localStorage.setItem('lastCreatedChatRoomId', newChatRoom.id);
+            
+            // 페이지 새로고침
+            window.location.reload();
         } else {
             throw new Error('Invalid chat room data');
         }
@@ -644,6 +678,13 @@ async function initChat() {
         if (userData) {
             currentUserId = userData.id;
             await getChatRooms();
+            
+            // 새로 생성된 채팅방이 있는지 확인하고 열기
+            const lastCreatedChatRoomId = localStorage.getItem('lastCreatedChatRoomId');
+            if (lastCreatedChatRoomId) {
+                openChatRoom(lastCreatedChatRoomId);
+                localStorage.removeItem('lastCreatedChatRoomId');
+            }
         } else {
             throw new Error('Failed to initialize user data');
         }

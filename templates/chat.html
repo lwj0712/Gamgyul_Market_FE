@@ -232,12 +232,13 @@
 			  </div>
 			  <div class="offcanvas-body p-0">
 				<div class="card card-chat-list rounded-end-lg-0 card-body border-end-lg-0 rounded-top-0">
-				  <form class="position-relative" id="user-search-container">
-					<input class="form-control py-2" type="search" placeholder="사용자 검색" aria-label="Search" id="userSearchInput">
-					<button class="btn bg-transparent text-secondary px-2 py-0 position-absolute top-50 end-0 translate-middle-y" type="submit">
-					  <i class="bi bi-search fs-5"></i>
-					</button>
-				  </form>
+					<form class="position-relative" id="user-search-container">
+						<input class="form-control py-2" type="search" placeholder="사용자 검색" aria-label="Search" id="userSearchInput">
+						<button class="btn bg-transparent text-secondary px-2 py-0 position-absolute top-50 end-0 translate-middle-y" type="submit">
+							<i class="bi bi-search fs-5"></i>
+						</button>
+						<div id="searchResults" class="position-absolute" style="display:none;"></div>
+					</form>
 				  <div id="searchResults" class="mt-2" style="display:none;"></div>
 				  <div class="mt-4 h-100">
 					<div class="chat-tab-list custom-scrollbar overflow-auto h-100" id="chat-list">
