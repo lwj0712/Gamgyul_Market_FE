@@ -140,11 +140,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 <!-- Card feed action START -->
                 <!-- 태그 표시 부분 -->
                 ${post.tags ? `
-                    <ul class="nav nav-stack py-3 small ms-4">
+                    <ul class="nav nav-stack py-3 small d-flex flex-row ms-4">
                         ${parseTags(post.tags)
                             .map(tag => `
-                                <li class="nav-item d-flex justify-content-between">
-                                    <span class="badge bg-primary me-1">${tag.trim()}</span>
+                                <li class="nav-item me-1">
+                                    <span class="badge bg-primary fs-6">${tag.trim()}</span>
                                 </li>
                             `).join('')}
                     </ul>
@@ -168,33 +168,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         </a>
                     </li>
                 </ul>
-                <!-- Card feed action END -->
-                <!-- Comments START -->
-                <div class="card-footer border-0 pt-0">
-                    <!-- Comment wrap START -->
-                    <ul class="comment-wrap list-unstyled">
-                        ${comments ? comments.slice(0, 2).map(comment => `
-                            <li class="comment-item">
-                                <div class="d-flex">
-                                    <div class="avatar avatar-xs">
-                                        <img class="avatar-img rounded-circle" src="${comment.user.profile_image || '/templates/images/placeholder.jpg'}" alt="${comment.user.username}">
-                                    </div>
-                                    <div class="ms-2">
-                                        <div class="bg-light rounded-start-top-0 p-3 rounded">
-                                            <div class="d-flex justify-content-between">
-                                                <h6 class="mb-1">${comment.user.username}</h6>
-                                                <small class="ms-2">${new Date(comment.created_at).toLocaleString()}</small>
-                                            </div>
-                                            <p class="small mb-0">${comment.content}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </li>
-                        `).join('') : ''}
-                    </ul>
-                    <!-- Comment wrap END -->
-                </div>
-                <!-- Comments END -->
             `;
             postList.appendChild(postElement);
         });
@@ -204,10 +177,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 태그 처리 함수
     function parseTags(tags) {
-        if (!tags) return [];
-        if (Array.isArray(tags)) return tags;
+        if (!tags || !tags.length) return [];
         try {
-            return JSON.parse(tags);
+            return JSON.parse(tags[0]);
         } catch (error) {
             console.error('태그 파싱 중 오류 발생:', error);
             return [];

@@ -159,12 +159,13 @@
             tagsContainer.innerHTML = '';
             if (post.tags && post.tags.length > 0) {
                 try {
-                    const tagsArray = Array.isArray(post.tags) ? post.tags : JSON.parse(post.tags);
+                    const tagsArray = JSON.parse(post.tags[0]);
+
                     tagsContainer.innerHTML = `
-                        <ul class="nav nav-stack py-3 small">
+                        <ul class="nav nav-stack py-3 small d-flex flex-row">
                             ${tagsArray.map(tag => `
-                                <li class="nav-item d-flex justify-content-between">
-                                    <span class="badge bg-primary me-1">${tag.trim()}</span>
+                                <li class="nav-item me-1">
+                                    <span class="badge bg-primary fs-6">${tag}</span>
                                 </li>
                             `).join('')}
                         </ul>
