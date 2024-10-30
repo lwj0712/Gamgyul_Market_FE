@@ -121,7 +121,7 @@ function displayProducts(products) {
 
     products.forEach(product => {
         const productElement = document.createElement('div');
-        productElement.className = 'col-sm-6 col-lg-4 mb-4';
+        productElement.className = 'col-sm-6 col-lg-6 mb-4';
         productElement.innerHTML = `
             <div class="card h-100">
                 <img src="${product.image || DEFAULT_PROFILE_IMAGE}" class="card-img-top" alt="${product.name}" style="height: 200px; object-fit: cover;">
