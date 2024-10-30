@@ -624,26 +624,41 @@ function debounce(func, wait) {
 document.addEventListener('DOMContentLoaded', function() {
     const userSearchInput = document.getElementById('userSearchInput');
     const messageForm = document.getElementById('message-form');
+    const messageInput = document.getElementById('message-input');
     const messageSearchInput = document.getElementById('messageSearchInput');
 
     messageSearchInput.addEventListener('input', debounce(handleMessageSearch, 300));
     userSearchInput.addEventListener('input', debounce(handleSearch, 300));
     
+    // 메시지 전송 이벤트 핸들러
     messageForm.addEventListener('submit', function(e) {
         e.preventDefault();
         const messageInput = document.getElementById('message-input');
         if (messageInput.value.trim()) {
             sendMessage(messageInput.value);
+            messageInput.value = ''; // 메시지 전송 후 입력 필드 초기화
+        }
+    });
+
+    // 메시지 입력 필드에서 Enter 키 처리
+    messageInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault(); // 기본 submit 동작 방지
+            if (messageInput.value.trim()) {
+                sendMessage(messageInput.value);
+                messageInput.value = ''; // 메시지 전송 후 입력 필드 초기화
+            }
         }
     });
 
     // Create hidden file input
     createFileInput();
 
-    // Add click handler for attachment button
+    // 이미지 업로드 버튼 이벤트 핸들러
     const attachButton = document.querySelector('.fa-paperclip').parentElement;
     attachButton.addEventListener('click', function(e) {
         e.preventDefault();
+        e.stopPropagation(); // 이벤트 전파 중단
         fileInput.click();
     });
 
