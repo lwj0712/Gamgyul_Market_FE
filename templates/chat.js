@@ -356,6 +356,7 @@ async function handleSearch() {
     if (query) {
         try {
             const data = await fetchWithCSRF(`${API_BASE_URL}/search/search-profile/?q=${encodeURIComponent(query)}`);
+            console.log('Search results:', data); // 검색 결과 로깅
             if (data && data.results) {
                 displaySearchResults(data.results);
             } else if (Array.isArray(data)) {
@@ -466,11 +467,11 @@ function displayMessageSearchResults(results) {
     results.forEach(message => {
         console.log('Search result message:', message);
         
-        // 백엔드에서 오는 username을 sender 객체로 변환
+        // 백엔드에서 오는 username과 profile_image를 sender 객체로 변환
         const senderObject = {
             username: message.username,
             id: null,  // ID는 검색 결과에 포함되지 않음
-            profile_image: null  // 프로필 이미지는 검색 결과에 포함되지 않음
+            profile_image: message.profile_image  // 프로필 이미지 추가
         };
 
         addMessage({
