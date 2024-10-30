@@ -99,7 +99,19 @@ function truncateText(text, maxLength = 30) {
     return text.substring(0, maxLength - 3) + '...';
 }
 
-// displayChatRooms 함수 내에서 사용
+// 마지막 메시지 텍스트 생성
+function getLastMessagePreview(message) {
+    if (!message) return 'No messages yet';
+    
+    // 이미지가 있는 경우
+    if (message.image) {
+        return message.content ? `📷 ${message.content}` : '📷 이미지';
+    }
+    
+    // 텍스트만 있는 경우
+    return message.content || 'No messages yet';
+}
+
 async function displayChatRooms(chatRooms) {
     const chatListContainer = document.querySelector('#chat-list ul');
     chatListContainer.innerHTML = '';
@@ -107,19 +119,19 @@ async function displayChatRooms(chatRooms) {
     const roomPromises = chatRooms.map(async (room) => {
         try {
             const response = await fetchWithAuth(`${API_BASE_URL}/chats/chatrooms/${room.id}/messages/`);
-            if (!response) return { ...room, lastMessage: 'No messages yet' };
+            if (!response) return { ...room, lastMessage: null };
             
             const data = await response.json();
             const messages = data.results || data;
             
             const lastMessage = Array.isArray(messages) && messages.length > 0 
-                ? messages[messages.length - 1].content 
-                : 'No messages yet';
+                ? messages[messages.length - 1]  // 전체 메시지 객체를 저장
+                : null;
             
             return { ...room, lastMessage };
         } catch (error) {
             console.error('Error fetching messages for room:', room.id, error);
-            return { ...room, lastMessage: 'No messages yet' };
+            return { ...room, lastMessage: null };
         }
     });
 
@@ -135,6 +147,9 @@ async function displayChatRooms(chatRooms) {
         const username = otherUser.username || room.name || 'Unknown User';
         const profileImage = otherUser.profile_image ? getFullImageUrl(otherUser.profile_image) : DEFAULT_PROFILE_IMAGE;
 
+        // 마지막 메시지 미리보기 생성
+        const lastMessagePreview = getLastMessagePreview(room.lastMessage);
+
         roomElement.innerHTML = `
             <a href="#chat-${room.id}" class="nav-link ${isActive} text-start" id="chat-${room.id}-tab" data-bs-toggle="pill" role="tab">
                 <div class="d-flex">
@@ -143,7 +158,12 @@ async function displayChatRooms(chatRooms) {
                     </div>
                     <div class="flex-grow-1 d-block">
                         <h6 class="mb-0 mt-1">${username}</h6>
-                        <p class="small text-muted mb-0">${truncateText(room.lastMessage)}</p>
+                        <p class="small text-muted mb-0">${truncateText(lastMessagePreview)}</p>
+                        ${room.lastMessage ? `
+                            <small class="text-muted">
+                                ${formatDate(room.lastMessage.sent_at).split(' ')[1]}
+                            </small>
+                        ` : ''}
                     </div>
                 </div>
             </a>
@@ -585,7 +605,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Create hidden file input
     createFileInput();
-    
+
     // Add click handler for attachment button
     const attachButton = document.querySelector('.fa-paperclip').parentElement;
     attachButton.addEventListener('click', function(e) {
