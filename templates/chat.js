@@ -201,42 +201,47 @@ async function openChatRoom(roomId) {
     }
 }
 
-// Update WebSocket connection to use JWT
 function setupChatWebSocket(roomId) {
-    if (socket) {
-        socket.close();
-    }
-    
     const token = getToken();
-    if (!token) {
-        console.error('No JWT token available for WebSocket connection');
-        return;
-    }
+    if (!token) return;
 
-    console.log('Setting up WebSocket for room:', roomId);
-    socket = new WebSocket(`ws://${API_BASE_URL.replace('http://', '')}/ws/chat/${roomId}/?token=${token}`);
-    
-    socket.onmessage = function(e) {
-        const data = JSON.parse(e.data);
-        console.log('WebSocket message received:', data);
-        if (data.type === 'chat_message') {
-            console.log('Calling addMessage from WebSocket');
-            addMessage({
-                id: data.message_id,
-                content: data.message,
-                sender: data.sender,
-                sent_at: data.sent_at,
-                is_read: data.is_read
-            });
-        }
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsHost = window.location.hostname === 'localhost' ? '127.0.0.1:8000' : window.location.host;
+    const wsUrl = `${wsProtocol}//${wsHost}/ws/chat/${roomId}/?token=${token}`;
+
+    socket = new WebSocket(wsUrl);
+
+    socket.onopen = function() {
+        console.log('WebSocket connected');
     };
 
-    socket.onopen = function(e) {
-        console.log('WebSocket connection established');
+    socket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        console.log('WebSocket message:', data);
+        
+        if (data.type === 'connection_established') {
+            console.log('Successfully connected to chat room');
+        } else if (data.type === 'chat_message') {
+            handleChatMessage(data);
+        }
     };
 
     socket.onerror = function(e) {
         console.error('WebSocket error:', e);
+        // 에러 코드에 따른 처리
+        if (e.code === 4001) {
+            console.error('Authentication failed');
+        } else if (e.code === 4002) {
+            console.error('Not authorized for this chat room');
+        }
+    };
+
+    socket.onclose = function(e) {
+        console.log('WebSocket closed:', e);
+        // 비정상적인 종료인 경우 재연결
+        if (e.code !== 1000) {
+            setTimeout(() => setupChatWebSocket(roomId), 3000);
+        }
     };
 }
 
@@ -268,7 +273,11 @@ function addMessage({ id, content, sender, image, sent_at, is_read }) {
     console.log('Adding message:', { id, content, sender, image, sent_at, is_read });
     const messagesContainer = document.getElementById('messages');
     const messageElement = document.createElement('div');
-    const isSentByCurrentUser = sender && sender.id === currentUserId;
+    
+    // currentUser를 직접 가져와서 비교
+    const currentUser = getCurrentUser();
+    const isSentByCurrentUser = sender && currentUser && sender.username === currentUser.username;
+    
     messageElement.className = `d-flex ${isSentByCurrentUser ? 'justify-content-end' : 'justify-content-start'} mb-3`;
     
     const formattedDate = formatDate(sent_at);
@@ -318,7 +327,7 @@ async function sendMessage(content) {
         if (!response) return;
         
         const data = await response.json();
-        console.log('Server response:', data);
+        console.log('Server response:', data);        
 
         if (data && data.id) {
             document.getElementById('message-input').value = '';
@@ -326,13 +335,14 @@ async function sendMessage(content) {
             addMessage({
                 id: data.id,
                 content: content,
-                sender: currentUser,
+                sender: {
+                    id: currentUser.id,
+                    username: currentUser.username,
+                    profile_image: currentUser.profile_image
+                },
                 sent_at: data.sent_at,
                 is_read: false
             });
-            console.log('Message sent successfully, waiting for WebSocket broadcast');
-        } else {
-            throw new Error('Message not saved properly');
         }
     } catch (error) {
         console.error('Error sending message:', error);
