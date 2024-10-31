@@ -375,7 +375,7 @@ function formatDate(dateString) {
         const month = String(date.getUTCMonth() + 1).padStart(2, '0');
         const day = String(date.getUTCDate()).padStart(2, '0');
         
-        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        return `${year}-${month}-${day} ${hours}:${minutes}`;
     } catch (error) {
         console.error('Error formatting date:', error);
         return 'Invalid Date';
