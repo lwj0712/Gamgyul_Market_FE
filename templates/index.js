@@ -78,7 +78,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function displayPosts(posts) {
-        console.log(posts);
+        console.log('Posts to display:', posts);
     
         posts.forEach(async post => {
             const postElement = document.createElement('div');
@@ -86,23 +86,28 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const comments = await fetchComments(post.id);
             const commentsCount = comments ? comments.length : 0;
-            // 좋아요 상태에 따른 클래스와 색상 설정
-            const isLiked = post.is_liked ? 'active text-primary' : '';
-
-            // 좋아요 상태에 따른 스타일 설정
-            const likeButtonStyle = post.is_liked 
+    
+            // 사용자 정보 처리 - 검색 결과와 일반 게시물 모두 처리
+            const username = post.user ? post.user.username : post.username;
+            const profileImage = post.user?.profile_image || '/templates/images/placeholder.jpg';
+    
+            // 좋아요 관련 정보 처리
+            const isLiked = post.is_liked || false;
+            const likesCount = post.likes_count || 0;
+    
+            // 스타일 설정
+            const likeButtonStyle = isLiked 
                 ? `color: #0d6efd; font-weight: bold;` 
                 : `color: #666;`;
-            const likeIconStyle = post.is_liked 
+            const likeIconStyle = isLiked 
                 ? `color: #0d6efd;` 
                 : `color: #666;`;
-            const likeText = post.is_liked ? '좋아요 취소' : '좋아요';
-
-            // 이미지 URL 처리 로직 수정
-            const imageUrl = post.images && post.images.length > 0
-            ? post.images[0]  // S3 URL을 직접 사용
-            : '/templates/images/placeholder.jpg';
-
+            const likeText = isLiked ? '좋아요 취소' : '좋아요';
+    
+            // 이미지 URL 처리
+            const images = post.images || [];
+            const imageUrl = images.length > 0 ? images[0] : '/templates/images/placeholder.jpg';
+    
             postElement.innerHTML = `
                 <div class="card-header border-0 pb-0">
                     <div class="d-flex align-items-center justify-content-between">
@@ -110,13 +115,13 @@ document.addEventListener('DOMContentLoaded', function() {
                             <!-- Avatar -->
                             <div class="avatar avatar-story me-2">
                                 <a href="#!">
-                                    <img class="avatar-img rounded-circle" src="${post.user.profile_image || '/templates/images/placeholder.jpg'}" alt="${post.user.username}">
+                                    <img class="avatar-img rounded-circle" src="${profileImage}" alt="${username}">
                                 </a>
                             </div>
                             <!-- Info -->
                             <div>
                                 <div class="nav nav-divider">
-                                    <h6 class="nav-item card-title mb-0">${post.user.username}</h6>
+                                    <h6 class="nav-item card-title mb-0">${username}</h6>
                                     <span class="nav-item small">${new Date(post.created_at).toLocaleString()}</span>
                                 </div>
                                 <p class="mb-0 small">${post.location || ''}</p>
@@ -127,7 +132,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <!-- Card body -->
                 <div class="card-body post-detail-link" data-post-id="${post.id}">
                     <p>${post.content}</p>
-                    ${post.images && post.images.length > 0 ? `
+                    ${images.length > 0 ? `
                         <div>
                             <img src="${imageUrl}" 
                                  class="card-img-top" 
@@ -151,15 +156,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 ` : ''}
                 <ul class="nav nav-stack py-3 small ms-4">
                     <li class="nav-item">
-                        <a class="nav-link like-button ${post.is_liked ? 'active text-primary' : ''}" 
+                        <a class="nav-link like-button ${isLiked ? 'active text-primary' : ''}" 
                            href="#!" 
                            data-post-id="${post.id}" 
-                           data-likes-count="${post.likes_count || 0}"
-                           data-is-liked="${post.is_liked || false}"
+                           data-likes-count="${likesCount}"
+                           data-is-liked="${isLiked}"
                            style="${likeButtonStyle}">
                             <i class="bi bi-hand-thumbs-up-fill pe-1" style="${likeIconStyle}"></i>
                             <span class="like-text">${likeText}</span> 
-                            (<span class="likes-count">${post.likes_count || 0}</span>)
+                            (<span class="likes-count">${likesCount}</span>)
                         </a>
                     </li>
                     <li class="nav-item">
@@ -171,7 +176,7 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
             postList.appendChild(postElement);
         });
-
+    
         addEventListeners();
     }
 
@@ -186,12 +191,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // 태그로 게시물 검색
-    async function fetchPostsByTags(tags) {
+    // 게시물 검색
+    async function searchPosts(query) {
         try {
-            const tagParams = tags.map(tag => `tags=${encodeURIComponent(tag)}`).join('&');
             const response = await authenticatedFetch(
-                `${API_BASE_URL}/search/search-post/?${tagParams}`,
+                `${API_BASE_URL}/search/search-post/?q=${encodeURIComponent(query)}`,
                 { method: 'GET' }
             );
 
@@ -201,23 +205,54 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             return null;
         } catch (error) {
-            console.error('태그로 게시물 조회 중 에러 발생:', error);
+            console.error('검색 중 에러 발생:', error);
             return null;
         }
     }
 
+    // 검색어 처리 함수
+    function processSearchQuery(searchText) {
+        const words = searchText.split(/[\s,]+/).filter(word => word); // 공백이나 쉼표로 구분
+        return words.map(word => {
+            // 해시태그가 없는 단어에 자동으로 추가하지 않음
+            return word.startsWith('#') ? word : word;
+        }).join(' ');
+    }
+
+    // 검색 결과 표시 함수
+    function displaySearchResults(posts) {
+        postList.innerHTML = ''; // 기존 게시물 목록 초기화
+        
+        if (!posts || posts.length === 0) {
+            postList.innerHTML = '<div class="alert alert-info">검색 결과가 없습니다.</div>';
+            return;
+        }
+        
+        displayPosts(posts);
+    }
+
     // 검색 버튼 이벤트 핸들러
     searchButton.addEventListener('click', async () => {
-        const tags = searchInput.value.split(',').map(tag => tag.trim()).filter(tag => tag);
-        if (tags.length > 0) {
-            const posts = await fetchPostsByTags(tags);
-            if (posts && posts.results) {
-                displayPosts(posts.results);
-            } else {
-                postList.innerHTML = '<p>검색 결과가 없습니다.</p>';
-            }
+        const searchText = searchInput.value.trim();
+        
+        if (!searchText) {
+            alert('검색어를 입력해주세요.');
+            return;
+        }
+
+        // 검색어 처리
+        const processedQuery = processSearchQuery(searchText);
+        
+        // 로딩 표시
+        postList.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+        
+        // 검색 실행
+        const searchResults = await searchPosts(processedQuery);
+        
+        if (searchResults) {
+            displaySearchResults(searchResults.results || []);
         } else {
-            alert('적어도 하나의 태그를 입력해주세요.');
+            postList.innerHTML = '<div class="alert alert-danger">검색 중 오류가 발생했습니다.</div>';
         }
     });
 
@@ -240,6 +275,14 @@ document.addEventListener('DOMContentLoaded', function() {
             return null;
         }
     }
+
+    // 검색 입력창 엔터 키 이벤트 추가
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            searchButton.click();
+        }
+    });
 
     // 친구 추천 표시
     function displayFriendRecommendations(recommendations) {
