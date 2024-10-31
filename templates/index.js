@@ -301,13 +301,32 @@ document.addEventListener('DOMContentLoaded', function() {
                 `${API_BASE_URL}/likes/posts/${postId}/like/`,
                 { method: 'POST' }
             );
-    
+        
             if (response && response.ok) {
-                const data = await response.json();
-                return {
-                    likes_count: data.likes_count,
-                    is_liked: data.is_liked
-                };
+                // 응답 내용이 있는지 먼저 확인
+                const text = await response.text();
+                if (!text) {
+                    // 응답이 비어있는 경우, 현재 버튼의 상태를 반전시켜 반환
+                    return {
+                        likes_count: parseInt(document.querySelector(`[data-post-id="${postId}"] .likes-count`).textContent) - 1,
+                        is_liked: false
+                    };
+                }
+                
+                // JSON 파싱 시도
+                try {
+                    const data = JSON.parse(text);
+                    return {
+                        likes_count: data.likes_count,
+                        is_liked: data.is_liked
+                    };
+                } catch (parseError) {
+                    console.error('JSON 파싱 에러:', parseError);
+                    return {
+                        likes_count: parseInt(document.querySelector(`[data-post-id="${postId}"] .likes-count`).textContent) - 1,
+                        is_liked: false
+                    };
+                }
             }
             return null;
         } catch (error) {
@@ -325,7 +344,7 @@ document.addEventListener('DOMContentLoaded', function() {
         window.isEventListenerAdded = true;
     }
 
-    // 클릭 이벤트 핸들러를 별도 함수로 분리
+    // 클릭 이벤트 핸들러 함수
     async function handleClick(e) {
         // 좋아요 버튼 클릭 처리
         if (e.target.closest('.like-button')) {
