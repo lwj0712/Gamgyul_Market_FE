@@ -77,7 +77,7 @@
                         reportButton.className = 'mt-3';
                         reportButton.innerHTML = `
                             <button class="btn btn-warning btn-sm" onclick="window.location.href='/templates/report-form.html?content_type=posts.post&object_id=${postId}'">
-                                <i class="bi bi-exclamation-triangle"></i> 신고하기
+                                <i class="bi bi-exclamation-triangle-fill"></i> 신고
                             </button>
                         `;
                         document.getElementById('post-actions').after(reportButton);
