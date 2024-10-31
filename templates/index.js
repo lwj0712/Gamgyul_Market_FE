@@ -420,7 +420,7 @@ document.addEventListener('DOMContentLoaded', function() {
     async function init() {
         // JWT 토큰이 없으면 로그인 페이지로 리다이렉트
         if (!getJWTToken()) {
-            window.location.href = '/login.html';
+            window.location.href = '/templates/login.html';
             return;
         }
 
@@ -445,10 +445,10 @@ document.addEventListener('DOMContentLoaded', function() {
         recommendationPage++;
         const startIndex = (recommendationPage - 1) * recommendationsPerPage;
         const endIndex = startIndex + recommendationsPerPage;
-        const moreRecommendations = allRecommendations.slice(startIndex, endIndex);
+        const moreRecommendations = allRecommendations.slice(0, endIndex); // 처음부터 현재 페이지까지의 모든 추천
         
         if (moreRecommendations.length > 0) {
-            displayFriendRecommendations([...friendRecommendations.querySelectorAll('.hstack'), ...moreRecommendations]);
+            displayFriendRecommendations(moreRecommendations);
             addEventListeners();
         }
         

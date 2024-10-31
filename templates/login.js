@@ -55,7 +55,7 @@ async function handleGoogleCallback() {
 
     try {
         // 백엔드에 Google access token 전송
-        const response = await fetch('http://127.0.0.1:8000/accounts/google/', {
+        const response = await fetch(`${API_BASE_URL}/accounts/google/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -73,7 +73,7 @@ async function handleGoogleCallback() {
         localStorage.setItem('jwt_token', data.access_token);
 
         // 사용자 정보 요청 및 저장
-        const userResponse = await fetch('http://127.0.0.1:8000/accounts/current-user/', {
+        const userResponse = await fetch(`${API_BASE_URL}/accounts/current-user/`, {
             headers: {
                 'Authorization': `Bearer ${data.access_token}`,
                 'Content-Type': 'application/json'

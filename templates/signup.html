@@ -42,82 +42,62 @@
           <form class="mt-4" id="signup-form">
             <!-- Username -->
             <div class="mb-3 input-group-lg">
-              <input type="text" 
-                     class="form-control" 
-                     id="username" 
-                     name="username" 
-                     placeholder="사용자명" 
-                     autocomplete="username"
-                     required>
-              <small class="form-text text-muted">150자 이하, 문자, 숫자 및 @/./+/-/_만 사용 가능</small>
+                <input type="text" 
+                       class="form-control" 
+                       id="username" 
+                       name="username" 
+                       placeholder="사용자명" 
+                       autocomplete="username"
+                       required>
+                <small class="form-text text-muted">150자 이하, 문자, 숫자 및 @/./+/-/_만 사용 가능</small>
             </div>
             
             <!-- Email -->
             <div class="mb-3 input-group-lg">
-              <input type="email" 
-                     class="form-control" 
-                     id="email" 
-                     name="email" 
-                     placeholder="이메일" 
-                     autocomplete="email"
-                     required>
+                <input type="email" 
+                       class="form-control" 
+                       id="email" 
+                       name="email" 
+                       placeholder="이메일" 
+                       autocomplete="email"
+                       required>
             </div>
-
+        
             <!-- Password -->
             <div class="mb-3 position-relative">
-              <div class="input-group input-group-lg">
-                <input class="form-control fakepassword" 
-                       type="password" 
-                       id="password1" 
-                       name="password1" 
-                       placeholder="비밀번호" 
-                       autocomplete="new-password"
-                       required>
-                <span class="input-group-text p-0">
-                  <i class="fakepasswordicon fa-solid fa-eye-slash cursor-pointer p-2 w-40px"></i>
-                </span>
-              </div>
+                <div class="input-group input-group-lg">
+                    <input class="form-control fakepassword" 
+                           type="password" 
+                           id="password1" 
+                           name="password1" 
+                           placeholder="비밀번호" 
+                           autocomplete="new-password"
+                           required>
+                    <span class="input-group-text p-0">
+                        <i class="fakepasswordicon fa-solid fa-eye-slash cursor-pointer p-2 w-40px"></i>
+                    </span>
+                </div>
             </div>
-
+        
             <!-- Confirm password -->
             <div class="mb-3 input-group-lg">
-              <input class="form-control" 
-                     type="password" 
-                     id="password2" 
-                     name="password2" 
-                     placeholder="비밀번호 확인" 
-                     autocomplete="new-password"
-                     required>
+                <input class="form-control" 
+                       type="password" 
+                       id="password2" 
+                       name="password2" 
+                       placeholder="비밀번호 확인" 
+                       autocomplete="new-password"
+                       required>
             </div>
-
-            <!-- Bio -->
-            <div class="mb-3 input-group-lg">
-              <textarea class="form-control" 
-                        id="bio" 
-                        name="bio" 
-                        placeholder="자기소개 (선택사항)"
-                        rows="3"
-                        maxlength="500"></textarea>
-            </div>
-
-            <!-- Profile image -->
-            <div class="mb-3 input-group-lg">
-              <input type="file" 
-                     class="form-control" 
-                     id="profile_image" 
-                     name="profile_image" 
-                     accept="image/*">
-              <small class="form-text text-muted">프로필 이미지 (선택사항)</small>
-            </div>
-
+        
             <!-- Error message -->
             <div id="error-message" class="alert alert-danger d-none" role="alert"></div>
-
+        
             <!-- Button -->
             <div class="d-grid">
-              <button type="submit" class="btn btn-lg btn-primary">가입하기</button>
+                <button type="submit" class="btn btn-lg btn-primary">가입하기</button>
             </div>
-
+        
             <!-- Copyright -->
             <p class="mb-0 mt-3 text-center">©2024 <a target="_blank" href="#">감귤하우스</a>. All rights reserved</p>
           </form>
@@ -143,7 +123,7 @@ JS libraries, plugins and custom scripts -->
 <script src="assets/js/functions.js"></script>
 
 <!-- Custom signup script -->
-<script src="signup.js"></script>
+<script src="/templates/signup.js"></script>
 
 </body>
 </html>

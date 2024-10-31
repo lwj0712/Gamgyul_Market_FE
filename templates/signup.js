@@ -1,3 +1,5 @@
+const API_BASE_URL = 'http://127.0.0.1:8000';
+
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('signup-form');
     const errorMessage = document.getElementById('error-message');
@@ -20,7 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
         errorMessage.textContent = '';
 
         if (password.value !== confirmPassword.value) {
-            errorMessage.textContent = "비밀번호가 일치하지 않습니다.";
+            alert("비밀번호가 일치하지 않습니다.");
             return;
         }
 
@@ -30,20 +32,12 @@ document.addEventListener('DOMContentLoaded', function() {
             username: formData.get('username'),
             email: formData.get('email'),
             password1: formData.get('password1'),
-            password2: formData.get('password2'),
-            bio: formData.get('bio') || ''
+            password2: formData.get('password2')
         };
-
-        const profileImage = formData.get('profile_image');
-        if (profileImage && profileImage.size > 0) {
-            const imageFormData = new FormData();
-            // 먼저 회원가입을 진행하고, 이미지는 별도로 업로드하는 로직이 필요할 수 있습니다
-            imageFormData.append('profile_image', profileImage);
-        }
 
         try {
             // 회원가입 요청
-            const registerResponse = await fetch('http://127.0.0.1:8000/accounts/registration/', {
+            const registerResponse = await fetch(`${API_BASE_URL}/accounts/registration/`, {
                 method: 'POST',
                 credentials: 'include',
                 headers: {
@@ -53,7 +47,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 body: JSON.stringify(jsonData),
             });
-
+        
             if (!registerResponse.ok) {
                 const errorData = await registerResponse.json();
                 const errorMessages = Object.entries(errorData)
@@ -61,37 +55,58 @@ document.addEventListener('DOMContentLoaded', function() {
                     .join(' ');
                 throw new Error(errorMessages);
             }
-
+        
             // 회원가입 성공 후 자동 로그인 요청
             const loginData = {
                 email: formData.get('email'),
-                password: formData.get('password1')  // password1을 사용하도록 수정
+                password: formData.get('password1')
             };        
-
-            const loginResponse = await fetch('http://127.0.0.1:8000/api/token/', {
+        
+            const loginResponse = await fetch(`${API_BASE_URL}/api/token/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(loginData),
             });
-
+        
             if (!loginResponse.ok) {
+                alert('로그인 중 오류가 발생했습니다.');
                 throw new Error('로그인 중 오류가 발생했습니다.');
             }
-
+        
             const tokens = await loginResponse.json();
             
             // JWT 토큰을 로컬 스토리지에 저장
-            localStorage.setItem('access_token', tokens.access);
-            localStorage.setItem('refresh_token', tokens.refresh);
+            localStorage.setItem('jwt_token', tokens.access);
 
+            // 사용자 정보 요청 추가
+            const userResponse = await fetch(`${API_BASE_URL}/accounts/current-user/`, {
+                headers: {
+                    'Authorization': `Bearer ${tokens.access}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!userResponse.ok) {
+                alert('사용자 정보를 가져오는데 실패했습니다.');
+                throw new Error('사용자 정보를 가져오는데 실패했습니다.');
+            }
+
+            const userData = await userResponse.json();
+
+            // 사용자 정보를 localStorage에 저장
+            localStorage.setItem('user', JSON.stringify({
+                uuid: userData.id,
+                email: userData.email,
+                username: userData.username
+            }));
+        
             alert('회원가입에 성공했습니다!');
             
-            // 메인 페이지로 리다이렉트
             window.location.href = '/templates/index.html';
         } catch (error) {
-            console.error('회원가입 오류:', error);
+            alert(error.message || '회원가입 중 오류가 발생했습니다.');
             errorMessage.textContent = error.message || '회원가입 중 오류가 발생했습니다.';
         }
     });
@@ -104,7 +119,7 @@ const authUtils = {
         const refresh_token = localStorage.getItem('refresh_token');
         
         try {
-            const response = await fetch('http://127.0.0.1:8000/api/token/refresh/', {
+            const response = await fetch(`${API_BASE_URL}/api/token/refresh/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -141,6 +156,6 @@ const authUtils = {
     logout() {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
-        window.location.href = '/login.html';
+        window.location.href = '/templates/login.html';
     }
 };
