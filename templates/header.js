@@ -225,6 +225,74 @@ async function fetchCurrentUserInfo() {
     }
 }
 
+// WebSocket 메시지 처리 부분
+function setupWebSocket(userId) {
+    if (!userId) {
+        const currentUser = getCurrentUser();
+        userId = currentUser?.uuid;
+    }
+    
+    if (!userId) {
+        console.error('User ID not available for WebSocket connection');
+        return;
+    }
+
+    const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.hostname}:8000/ws/notifications/${userId}/`;
+    console.log('Attempting to connect to:', wsUrl);
+    
+    const socket = new WebSocket(wsUrl);
+
+    socket.onmessage = function(e) {
+        try {
+            const data = JSON.parse(e.data);
+            console.log('Received WebSocket message:', data);
+            
+            if (data.notification) {
+                // 새로운 알림 처리
+                const notificationList = document.getElementById('notification-list');
+                if (!notificationList) return;
+    
+                // "알림 내용이 없습니다" 메시지 제거
+                const noNotificationsElement = notificationList.querySelector('.no-notifications');
+                if (noNotificationsElement) {
+                    notificationList.innerHTML = '';
+                }
+    
+                // 서버로부터 알림 정보 가져오기
+                fetchNotifications().then(() => {
+                    // 새 알림 토스트 메시지 표시
+                    showToast('새로운 알림이 도착했습니다.', 'info');
+                }).catch(error => {
+                    console.error('Error fetching notifications after new message:', error);
+                });
+            }
+        } catch (error) {
+            console.error('Error processing WebSocket message:', error);
+        }
+    };
+
+    socket.onopen = function(e) {
+        console.log('WebSocket connection established');
+    };
+
+    socket.onclose = function(e) {
+        if (e.wasClean) {
+            console.log(`WebSocket closed cleanly, code=${e.code}, reason=${e.reason}`);
+        } else {
+            console.log('WebSocket connection died');
+        }
+        if (!document.hidden) {
+            setTimeout(() => setupWebSocket(userId), 5000);
+        }
+    };
+
+    socket.onerror = function(e) {
+        console.error('WebSocket error occurred:', e);
+    };
+
+    return socket;
+}
+
 // 알림 관련 함수들
 function updateNotificationCount() {
     const notificationCount = document.getElementById('notification-count');
@@ -234,15 +302,28 @@ function updateNotificationCount() {
     if (notificationBadge) notificationBadge.style.display = count > 0 ? 'inline' : 'none';
 }
 
+// renderNotifications 함수
 function renderNotifications() {
     const notificationList = document.getElementById('notification-list');
     if (!notificationList || !Array.isArray(notifications)) return;
 
+    if (notifications.length === 0) {
+        notificationList.innerHTML = `
+            <div class="no-notifications text-center p-3 text-muted">
+                알림 내용이 없습니다.
+            </div>
+        `;
+        return;
+    }
+
     notificationList.innerHTML = '';
     notifications.forEach((notification) => {
-        const senderProfileImage = notification.sender && notification.sender.profile_image
-            ? getFullImageUrl(notification.sender.profile_image)
-            : DEFAULT_PROFILE_IMAGE;
+        // notification이 문자열인 경우 처리
+        let message = typeof notification === 'string' ? notification : notification.message;
+        let id = typeof notification === 'string' ? null : notification.id;
+        let createdAt = typeof notification === 'string' ? new Date() : new Date(notification.created_at);
+        let senderProfileImage = typeof notification === 'string' ? DEFAULT_PROFILE_IMAGE :
+            (notification.sender?.profile_image ? getFullImageUrl(notification.sender.profile_image) : DEFAULT_PROFILE_IMAGE);
         
         const li = document.createElement('li');
         li.innerHTML = `
@@ -256,11 +337,11 @@ function renderNotifications() {
                 <div class="ms-sm-3 d-flex">
                     <div>
                         <p class="small mb-2">
-                            ${notification.message || '알림 내용이 없습니다.'}
+                            ${message || '알림 내용이 없습니다.'}
                         </p>
-                        <p class="small ms-3">${new Date(notification.created_at).toLocaleString()}</p>
+                        <p class="small ms-3">${createdAt.toLocaleString()}</p>
                     </div>
-                    <button class="btn btn-sm btn-danger-soft ms-auto" onclick="deleteNotification('${notification.id}')">삭제</button>
+                    ${id ? `<button class="btn btn-sm btn-danger-soft ms-auto" onclick="deleteNotification('${id}')">삭제</button>` : ''}
                 </div>
             </div>
         `;
@@ -276,7 +357,21 @@ async function fetchNotifications() {
         if (response && response.ok) {
             const data = await response.json();
             notifications = Array.isArray(data) ? data : (data.results || []);
-            renderNotifications();
+            
+            // 알림이 없는 경우 처리
+            if (notifications.length === 0) {
+                const notificationList = document.getElementById('notification-list');
+                if (notificationList) {
+                    notificationList.innerHTML = `
+                        <div class="no-notifications text-center p-3 text-muted">
+                            알림 내용이 없습니다.
+                        </div>
+                    `;
+                }
+            } else {
+                renderNotifications();
+            }
+            updateNotificationCount();
         }
     } catch (error) {
         console.error('Error fetching notifications:', error);
@@ -285,15 +380,38 @@ async function fetchNotifications() {
 }
 
 async function deleteNotification(notificationId) {
+    if (!notificationId) {
+        console.error('Invalid notification ID');
+        return;
+    }
+
     try {
         const response = await fetchWithAuth(
-            `${API_BASE_URL}/notifications/${notificationId}/`,  // URL 수정
+            `${API_BASE_URL}/notifications/${notificationId}/`,
             'DELETE'
         );
+        
         if (response && response.ok) {
+            // 성공적으로 삭제된 경우 UI 업데이트
             notifications = notifications.filter(n => n.id !== notificationId);
-            renderNotifications();
+            
+            if (notifications.length === 0) {
+                const notificationList = document.getElementById('notification-list');
+                if (notificationList) {
+                    notificationList.innerHTML = `
+                        <div class="no-notifications text-center p-3 text-muted">
+                            알림 내용이 없습니다.
+                        </div>
+                    `;
+                }
+            } else {
+                renderNotifications();
+            }
+            
+            updateNotificationCount();
             showSuccessMessage('알림이 삭제되었습니다.');
+        } else {
+            throw new Error('알림 삭제 실패');
         }
     } catch (error) {
         console.error('Error deleting notification:', error);
@@ -308,8 +426,38 @@ async function clearAllNotifications() {
             'DELETE'
         );
         if (response && response.ok) {
+            // 알림 배열 초기화
             notifications = [];
-            renderNotifications();
+            
+            // UI 업데이트
+            const notificationList = document.getElementById('notification-list');
+            if (notificationList) {
+                notificationList.innerHTML = `
+                    <div class="no-notifications text-center p-3 text-muted">
+                        알림 내용이 없습니다.
+                    </div>
+                `;
+            }
+            
+            // 알림 카운트 업데이트
+            updateNotificationCount();
+            
+            // 성공 메시지 표시
+            showSuccessMessage('모든 알림이 삭제되었습니다.');
+            
+            // 알림 배지 상태 업데이트
+            const notificationBadge = document.getElementById('notification-badge');
+            if (notificationBadge) {
+                notificationBadge.style.display = 'none';
+            }
+            
+            // 알림 카운트 텍스트 업데이트
+            const notificationCount = document.getElementById('notification-count');
+            if (notificationCount) {
+                notificationCount.textContent = '0';
+            }
+        } else {
+            throw new Error('알림 전체 삭제 실패');
         }
     } catch (error) {
         console.error('Error clearing notifications:', error);
@@ -355,66 +503,6 @@ async function init() {
         console.error('Error initializing application:', error);
         showErrorMessage('애플리케이션을 초기화하는 데 실패했습니다.');
     }
-}
-
-// WebSocket 메시지 처리 부분
-function setupWebSocket(userId) {
-    if (!userId) {
-        const currentUser = getCurrentUser();
-        userId = currentUser?.uuid;
-    }
-    
-    if (!userId) {
-        console.error('User ID not available for WebSocket connection');
-        return;
-    }
-
-    const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.hostname}:8000/ws/notifications/${userId}/`;
-    console.log('Attempting to connect to:', wsUrl);
-    
-    const socket = new WebSocket(wsUrl);
-
-    socket.onmessage = function(e) {
-        try {
-            const data = JSON.parse(e.data);
-            console.log('Received WebSocket message:', data);
-            if (data.notification) {
-                // 새로운 알림의 이미지 URL 처리
-                if (data.notification.sender && data.notification.sender.profile_image) {
-                    data.notification.sender.profile_image = getFullImageUrl(data.notification.sender.profile_image);
-                }
-                notifications.unshift(data.notification);
-                renderNotifications();
-                
-                // 새 알림 토스트 메시지 표시
-                showToast('새로운 알림이 도착했습니다.', 'info');
-            }
-        } catch (error) {
-            console.error('Error processing WebSocket message:', error);
-        }
-    };
-
-    // 나머지 WebSocket 이벤트 핸들러는 동일하게 유지
-    socket.onopen = function(e) {
-        console.log('WebSocket connection established');
-    };
-
-    socket.onclose = function(e) {
-        if (e.wasClean) {
-            console.log(`WebSocket closed cleanly, code=${e.code}, reason=${e.reason}`);
-        } else {
-            console.log('WebSocket connection died');
-        }
-        if (!document.hidden) {
-            setTimeout(() => setupWebSocket(userId), 5000);
-        }
-    };
-
-    socket.onerror = function(e) {
-        console.error('WebSocket error occurred:', e);
-    };
-
-    return socket;
 }
 
 // Event Listeners and Initialization
