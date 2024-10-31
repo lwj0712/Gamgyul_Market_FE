@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateProfileUI(profileData) {
         if (profileImage) profileImage.src = getFullImageUrl(profileData.profile_image);
         if (usernameElement) usernameElement.textContent = profileData.username;
-        if (bioElement) bioElement.textContent = profileData.bio || '소개가 없습니다.';
+        if (bioElement) bioElement.textContent = profileData.bio || '아직 소개가 없습니다.';
         if (followersCountElement) followersCountElement.textContent = profileData.followers_count || 0;
         if (followingCountElement) followingCountElement.textContent = profileData.following_count || 0;
 
