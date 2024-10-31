@@ -171,7 +171,7 @@ async function changePassword() {
 
     try {
         const response = await fetchWithAuth(
-            `${API_BASE_URL}/accounts/password/change/`,
+            `${API_BASE_URL}/accounts/password/change-password/`,
             'POST',
             {
                 old_password: oldPassword,
