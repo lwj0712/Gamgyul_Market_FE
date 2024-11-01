@@ -68,19 +68,21 @@
                 // 현재 사용자가 게시물 작성자인지 확인
                 const currentUserId = getCurrentUserId();
                 if (currentUserId) {
+                    const reportButtonContainer = document.getElementById('report-button-container');
+                    reportButtonContainer.innerHTML = '';
+        
                     if (currentUserId === data.user.id) {
                         // 작성자인 경우 수정/삭제 버튼 표시
                         document.getElementById('post-actions').style.display = 'block';
                     } else {
                         // 작성자가 아닌 경우 신고 버튼 표시
-                        const reportButton = document.createElement('div');
-                        reportButton.className = 'mt-3';
-                        reportButton.innerHTML = `
-                            <button class="btn btn-danger-soft btn-sm" onclick="window.location.href='/templates/report-form.html?content_type=posts.post&object_id=${postId}'">
-                                <i class="bi bi-exclamation-triangle-fill"></i> 신고
-                            </button>
-                        `;
-                        document.getElementById('post-actions').after(reportButton);
+                        const reportButton = document.createElement('button');
+                        reportButton.className = 'btn btn-warning btn-sm mt-3';
+                        reportButton.innerHTML = '<i class="bi bi-exclamation-triangle"></i> 신고하기';
+                        reportButton.onclick = () => {
+                            window.location.href = `/templates/report-form.html?content_type=posts.post&object_id=${postId}`;
+                        };
+                        reportButtonContainer.appendChild(reportButton);
                     }
                 }
                 
@@ -273,10 +275,17 @@
                     { method: 'POST' }
                 );
                 if (!response) return;
-
-                const result = await response.json();
-                document.getElementById('likes-count').textContent = result.likes_count;
-                fetchPostDetail(); // 좋아요 수 업데이트 후 전체 정보 새로고침
+                
+                if (response.status === 204) {
+                    await fetchPostDetail();
+                    return;
+                }
+                
+                if (response.headers.get('content-type')?.includes('application/json')) {
+                    const result = await response.json();
+                    document.getElementById('likes-count').textContent = result.likes_count;
+                    await fetchPostDetail();
+                }
             } catch (error) {
                 console.error('좋아요 처리 중 오류 발생:', error);
             }
