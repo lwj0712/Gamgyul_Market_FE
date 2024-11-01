@@ -184,8 +184,10 @@
             commentsList.innerHTML = '';
             const currentUserId = getCurrentUserId();
 
-            // 최상위 댓글만 필터링 (parent_comment가 없는 댓글)
-            const topLevelComments = comments.filter(comment => !comment.parent_comment);
+            // 최상위 댓글만 필터링하고 날짜순으로 정렬 (오래된 순)
+            const topLevelComments = comments
+                .filter(comment => !comment.parent_comment)
+                .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
             topLevelComments.forEach(comment => {
                 const li = document.createElement('li');
@@ -220,11 +222,16 @@
                         </div>
                     </div>
                 `;
+
+                // 댓글을 목록의 맨 아래에 추가
                 commentsList.appendChild(li);
 
-                // 대댓글 표시
+                // 대댓글이 있다면 표시 (대댓글도 날짜순으로 정렬)
                 if (comment.replies && comment.replies.length > 0) {
-                    displayReplies(comment.replies, comment.id, currentUserId);
+                    const sortedReplies = comment.replies.sort((a, b) => 
+                        new Date(a.created_at) - new Date(b.created_at)
+                    );
+                    displayReplies(sortedReplies, comment.id, currentUserId);
                 }
             });
         }
