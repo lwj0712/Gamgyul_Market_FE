@@ -77,8 +77,8 @@
                     } else {
                         // 작성자가 아닌 경우 신고 버튼 표시
                         const reportButton = document.createElement('button');
-                        reportButton.className = 'btn btn-warning btn-sm mt-3';
-                        reportButton.innerHTML = '<i class="bi bi-exclamation-triangle"></i> 신고하기';
+                        reportButton.className = 'btn btn-danger-soft btn-sm mt-3';
+                        reportButton.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> 신고';
                         reportButton.onclick = () => {
                             window.location.href = `/templates/report-form.html?content_type=posts.post&object_id=${postId}`;
                         };
