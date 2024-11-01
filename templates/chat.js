@@ -273,23 +273,261 @@ async function openChatRoom(roomId) {
         const messagesContainer = document.getElementById('messages');
         const messageInput = document.getElementById('message-input');
         
+        if (!chatWindow || !messagesContainer || !messageInput) {
+            throw new Error('Required chat elements not found');
+        }
+        
         messagesContainer.innerHTML = '';
         messageInput.value = '';
-        
         chatWindow.style.display = 'block';
 
+        // 이전 메시지 로드
         const response = await fetchWithAuth(`${API_BASE_URL}/chats/chatrooms/${roomId}/messages/`);
-        if (!response) return;
+        if (!response || !response.ok) {
+            throw new Error('Failed to fetch messages');
+        }
 
         const data = await response.json();
-        console.log('Messages response:', data);
+        console.log('Loaded messages:', data);
 
-        // response.results가 있으면 사용하고, 없으면 response 자체가 배열인지 확인
-        const messages = data.results || data;
+        const messages = Array.isArray(data) ? data : (data.results || []);
+        messages.forEach(message => {
+            addMessage({
+                id: message.id,
+                content: message.content,
+                sender: message.sender,
+                image: message.image,
+                sent_at: message.sent_at,
+                is_read: message.is_read
+            });
+        });
+
+        // WebSocket 연결 설정
+        const wsConnection = setupChatWebSocket(roomId);
+        if (!wsConnection) {
+            throw new Error('Failed to establish WebSocket connection');
+        }
+
+        currentRoomId = roomId;
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
         
-        if (Array.isArray(messages)) {
-            messages.forEach(message => {
-                console.log('Message:', message);
+        console.log('Successfully opened chat room:', roomId);
+    } catch (error) {
+        console.error('Error opening chat room:', error);
+        showErrorMessage('채팅방을 열 수 없습니다.');
+    }
+}
+
+// 채팅 WebSocket 연결 설정 함수
+function setupChatWebSocket(roomId) {
+    if (!roomId) {
+        console.error('Room ID is required for chat WebSocket connection');
+        return null;
+    }
+
+    const token = getToken();
+    if (!token) {
+        console.error('Token is required for chat WebSocket connection');
+        return null;
+    }
+
+    // 이전 WebSocket 연결이 있다면 정리
+    if (socket && socket.readyState !== WebSocket.CLOSED) {
+        console.log('Closing existing WebSocket connection');
+        socket.close();
+    }
+
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//127.0.0.1:8000/ws/chat/${roomId}/?token=${token}`;
+    
+    console.log('Attempting to connect to chat WebSocket:', wsUrl);
+
+    try {
+        socket = new WebSocket(wsUrl);
+
+        // 연결 상태 모니터링
+        let heartbeatInterval;
+        let reconnectTimeout;
+
+        socket.onopen = function(e) {
+            console.log(`Chat WebSocket connected for room ${roomId}`);
+            
+            // 연결 유지를 위한 heartbeat 설정
+            heartbeatInterval = setInterval(() => {
+                if (socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({ type: 'heartbeat' }));
+                }
+            }, 30000); // 30초마다 heartbeat
+            
+            // 연결 성공 시 서버에 조인 메시지 전송
+            socket.send(JSON.stringify({
+                type: 'join',
+                room_id: roomId
+            }));
+        };
+
+        socket.onmessage = function(e) {
+            try {
+                const data = JSON.parse(e.data);
+                console.log('Raw WebSocket message:', e.data);
+                console.log('Parsed WebSocket message:', data);
+                
+                // connection_established 처리
+                if (data.type === 'connection_established') {
+                    console.log('Connection established:', data.message);
+                    return;
+                }
+        
+                // 메시지 수신 처리 (status: 'received')
+                if (data.status === 'received' && data.message) {
+                    console.log('New message received:', data.message);
+                    handleIncomingMessage(data.message);
+                    return;
+                }
+        
+                // 읽음 상태 처리
+                if (data.type === 'read_receipt' || data.status === 'read') {
+                    console.log('Read receipt received:', data);
+                    if (data.message_id) {
+                        updateMessageReadStatus(data.message_id, true);
+                    }
+                    return;
+                }
+        
+                console.log('Unhandled message:', data);
+            } catch (error) {
+                console.error('Error processing WebSocket message:', error, e.data);
+            }
+        };        
+
+        socket.onerror = function(e) {
+            console.error('Chat WebSocket error:', e);
+            clearInterval(heartbeatInterval);
+        };
+
+        // Ping interval 설정
+        const pingInterval = setInterval(() => {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ type: 'ping' }));
+            }
+        }, 30000); // 30초마다 ping
+
+        socket.onclose = function(e) {
+            console.log('Chat WebSocket closed:', e);
+            clearInterval(pingInterval);
+
+            if (e.code !== 1000) {  // 비정상 종료
+                console.log('Attempting to reconnect...');
+                setTimeout(() => {
+                    if (currentRoomId === roomId) {
+                        setupChatWebSocket(roomId);
+                    }
+                }, 3000);
+            }
+        };
+
+        // 페이지 visibility 변경 감지
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'visible') {
+                if (socket.readyState !== WebSocket.OPEN) {
+                    console.log('Page visible, reconnecting WebSocket...');
+                    setupChatWebSocket(roomId);
+                }
+            }
+        });
+
+        return socket;
+    } catch (error) {
+        console.error('Error setting up chat WebSocket:', error);
+        showErrorMessage('채팅 연결을 설정할 수 없습니다.');
+        return null;
+    }
+}
+
+function updateMessageReadStatus(messageId, isRead) {
+    const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (messageElement) {
+        const readStatusIcon = messageElement.querySelector('.bi');
+        if (readStatusIcon) {
+            readStatusIcon.className = isRead ? 'bi bi-check-all text-primary' : 'bi bi-check';
+        }
+    }
+}
+
+function handleIncomingMessage(message) {
+    if (!message) {
+        console.error('No message data received');
+        return;
+    }
+
+    console.log('Processing incoming message:', message);
+
+    try {
+        const currentUser = getCurrentUser();
+        if (!currentUser) {
+            console.error('Current user info not available');
+            return;
+        }
+
+        // 중복 메시지 체크
+        const existingMessage = document.querySelector(`[data-message-id="${message.id}"]`);
+        if (existingMessage) {
+            console.log('Message already exists:', message.id);
+            return;
+        }
+
+        // UI에 메시지 추가
+        addMessage({
+            id: message.id,
+            content: message.content,
+            sender: message.sender,
+            image: message.image,
+            sent_at: message.sent_at,
+            is_read: message.is_read
+        });
+
+        // 상대방 메시지인 경우 읽음 상태 업데이트
+        if (message.sender.id !== currentUser.id && 
+            document.visibilityState === 'visible') {
+            socket.send(JSON.stringify({
+                type: 'read_receipt',
+                message_id: message.id,
+                room_id: currentRoomId
+            }));
+        }
+    } catch (error) {
+        console.error('Error handling incoming message:', error);
+    }
+}
+
+async function fetchLatestMessages(roomId) {
+    if (!roomId) {
+        console.error('No room ID provided for fetching messages');
+        return;
+    }
+
+    try {
+        const response = await fetchWithAuth(`${API_BASE_URL}/chats/chatrooms/${roomId}/messages/`);
+        if (!response || !response.ok) {
+            throw new Error('Failed to fetch messages');
+        }
+
+        const data = await response.json();
+        console.log('Fetched latest messages:', data);
+
+        const messages = Array.isArray(data) ? data : (data.results || []);
+        
+        // 현재 표시된 마지막 메시지 ID 확인
+        const lastDisplayedMessage = document.querySelector('#messages [data-message-id]:last-child');
+        const lastDisplayedId = lastDisplayedMessage ? 
+            parseInt(lastDisplayedMessage.getAttribute('data-message-id')) : 0;
+
+        // 새 메시지만 필터링
+        const newMessages = messages.filter(msg => parseInt(msg.id) > lastDisplayedId);
+        
+        if (newMessages.length > 0) {
+            console.log('New messages to display:', newMessages);
+            newMessages.forEach(message => {
                 addMessage({
                     id: message.id,
                     content: message.content,
@@ -299,63 +537,11 @@ async function openChatRoom(roomId) {
                     is_read: message.is_read
                 });
             });
-        } else {
-            console.error('Unexpected response format:', data);
-            throw new Error('Unexpected message format');
         }
-        
-        setupChatWebSocket(roomId);
-        currentRoomId = roomId;
-
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
     } catch (error) {
-        console.error('Error opening chat room:', error);
-        showErrorMessage('채팅방을 열 수 없습니다.');
+        console.error('Error fetching latest messages:', error);
+        showErrorMessage('새 메시지를 불러오는데 실패했습니다.');
     }
-}
-
-function setupChatWebSocket(roomId) {
-    const token = getToken();
-    if (!token) return;
-
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsHost = window.location.hostname === 'localhost' ? '127.0.0.1:8000' : window.location.host;
-    const wsUrl = `${wsProtocol}//${wsHost}/ws/chat/${roomId}/?token=${token}`;
-
-    socket = new WebSocket(wsUrl);
-
-    socket.onopen = function() {
-        console.log('WebSocket connected');
-    };
-
-    socket.onmessage = function(e) {
-        const data = JSON.parse(e.data);
-        console.log('WebSocket message:', data);
-        
-        if (data.type === 'connection_established') {
-            console.log('Successfully connected to chat room');
-        } else if (data.type === 'chat_message') {
-            handleChatMessage(data);
-        }
-    };
-
-    socket.onerror = function(e) {
-        console.error('WebSocket error:', e);
-        // 에러 코드에 따른 처리
-        if (e.code === 4001) {
-            console.error('Authentication failed');
-        } else if (e.code === 4002) {
-            console.error('Not authorized for this chat room');
-        }
-    };
-
-    socket.onclose = function(e) {
-        console.log('WebSocket closed:', e);
-        // 비정상적인 종료인 경우 재연결
-        if (e.code !== 1000) {
-            setTimeout(() => setupChatWebSocket(roomId), 3000);
-        }
-    };
 }
 
 // 날짜 포맷팅 유틸리티 함수 추가
@@ -418,19 +604,16 @@ async function handleFileSelect(event) {
 }
 
 async function sendMessage(content = null, file = null) {
-    if (!currentRoomId) {
-        console.error('No chat room selected');
+    if (!currentRoomId || !socket || socket.readyState !== WebSocket.OPEN) {
+        console.error('No active chat connection');
+        showErrorMessage('채팅 연결이 활성화되지 않았습니다.');
         return;
     }
 
     try {
         const formData = new FormData();
-        if (content) {
-            formData.append('content', content);
-        }
-        if (file) {
-            formData.append('image', file);
-        }
+        if (content) formData.append('content', content);
+        if (file) formData.append('image', file);
 
         const token = getToken();
         const response = await fetch(
@@ -448,38 +631,42 @@ async function sendMessage(content = null, file = null) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const data = await response.json();
-        console.log('Server response:', data);
+        const messageData = await response.json();
+        console.log('Message sent successfully:', messageData);
 
-        if (data && data.id) {
+        // 서버 형식에 맞춰 WebSocket 메시지 전송
+        socket.send(JSON.stringify({
+            status: 'send',
+            message: messageData,
+            room_id: currentRoomId
+        }));
+
+        // UI에 메시지 추가
+        addMessage({
+            id: messageData.id,
+            content: messageData.content,
+            sender: messageData.sender,
+            image: messageData.image,
+            sent_at: messageData.sent_at,
+            is_read: messageData.is_read
+        });
+
+        // 입력 필드 초기화
+        if (content) {
             document.getElementById('message-input').value = '';
-            const currentUser = getCurrentUser();
-            
-            // Add the message to the chat
-            addMessage({
-                id: data.id,
-                content: data.content,
-                sender: {
-                    id: currentUser.id,
-                    username: currentUser.username,
-                    profile_image: currentUser.profile_image
-                },
-                image: data.image,
-                sent_at: data.sent_at,
-                is_read: false
-            });
         }
     } catch (error) {
         console.error('Error sending message:', error);
         showErrorMessage('메시지 전송 중 오류가 발생했습니다.');
-        throw error;
     }
 }
 
 function addMessage({ id, content, sender, image, sent_at, is_read }) {
-    console.log('Adding message:', { id, content, sender, image, sent_at, is_read });
+    console.log('Adding message to UI:', { id, content, sender, image, sent_at, is_read });
+    
     const messagesContainer = document.getElementById('messages');
     const messageElement = document.createElement('div');
+    messageElement.setAttribute('data-message-id', id);  // 메시지 ID 속성 추가
     
     const currentUser = getCurrentUser();
     const isSentByCurrentUser = sender && currentUser && sender.username === currentUser.username;
@@ -926,15 +1113,5 @@ async function fetchCurrentUserInfo() {
         console.error('Error fetching current user info:', error);
         showErrorMessage('사용자 정보를 불러오는 데 실패했습니다.');
         return null;
-    }
-}
-
-function updateMessageReadStatus(messageId, isRead) {
-    const messageElement = document.getElementById(`message-${messageId}`);
-    if (messageElement) {
-        const readStatusIcon = messageElement.querySelector('.bi');
-        if (readStatusIcon) {
-            readStatusIcon.className = isRead ? 'bi bi-check-all text-primary' : 'bi bi-check';
-        }
     }
 }
