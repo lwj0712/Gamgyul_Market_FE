@@ -311,6 +311,9 @@ async function openChatRoom(roomId) {
         currentRoomId = roomId;
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
         
+        // 나가기 버튼
+        addLeaveButton();
+        
         console.log('Successfully opened chat room:', roomId);
     } catch (error) {
         console.error('Error opening chat room:', error);
@@ -716,6 +719,110 @@ function addMessage({ id, content, sender, image, sent_at, is_read }) {
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
 
+// Chat room leave functionality
+async function leaveChatRoom(roomId) {
+    if (!roomId) {
+        console.error('Room ID is required to leave chat room');
+        return;
+    }
+
+    try {
+        // WebSocket 연결 종료
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.close();
+        }
+
+        const response = await fetchWithAuth(
+            `${API_BASE_URL}/chats/chatrooms/${roomId}/leave/`,
+            'DELETE'
+        );
+
+        if (response.ok) {
+            // UI에서 채팅방 제거
+            const chatRoomElement = document.querySelector(`#chat-${roomId}-tab`);
+            if (chatRoomElement) {
+                chatRoomElement.closest('li').remove();
+            }
+
+            // 채팅 창 초기화
+            const chatWindow = document.getElementById('chat-window');
+            const messagesContainer = document.getElementById('messages');
+            if (chatWindow && messagesContainer) {
+                messagesContainer.innerHTML = '';
+                chatWindow.style.display = 'none';
+            }
+
+            // 현재 채팅방 ID 초기화
+            currentRoomId = null;
+
+            // 채팅방 목록 새로고침
+            await getChatRooms();
+
+            showToast('채팅방에서 나갔습니다.');
+
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000); // 1초 후 새로고침
+        } else {
+            throw new Error('Failed to leave chat room');
+        }
+    } catch (error) {
+        console.error('Error leaving chat room:', error);
+        showErrorMessage('채팅방을 나가는데 실패했습니다.');
+    }
+}
+
+// Toast 메시지 표시 함수
+function showToast(message) {
+    const toastContainer = document.createElement('div');
+    toastContainer.style.position = 'fixed';
+    toastContainer.style.bottom = '20px';
+    toastContainer.style.right = '20px';
+    toastContainer.style.zIndex = '1050';
+    
+    toastContainer.innerHTML = `
+        <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-body">
+                ${message}
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(toastContainer);
+    
+    setTimeout(() => {
+        toastContainer.remove();
+    }, 3000);
+}
+
+// 채팅방 나가기 버튼 UI 추가 함수
+function addLeaveButton() {
+    // 기존 버튼이 있다면 제거
+    const existingButton = document.querySelector('.leave-chat-button');
+    if (existingButton) {
+        existingButton.remove();
+    }
+
+    // 검색 폼 컨테이너 찾기
+    const searchContainer = document.getElementById('message-search-container');
+    if (!searchContainer) return;
+
+    // 나가기 버튼 생성
+    const leaveButton = document.createElement('button');
+    leaveButton.className = 'btn btn-danger-soft btn-sm leave-chat-button ms-2';
+    leaveButton.innerHTML = '<i class="bi bi-box-arrow-right"></i> 나가기';
+    leaveButton.onclick = () => {
+        if (currentRoomId) {
+            if (confirm('정말로 이 채팅방을 나가시겠습니까?')) {
+                leaveChatRoom(currentRoomId);
+            }
+        }
+    };
+
+    // 버튼을 검색 폼 컨테이너의 마지막 자식으로 추가
+    searchContainer.appendChild(leaveButton);
+}
+
 // Search Functions
 async function handleSearch() {
     const query = document.getElementById('userSearchInput').value.trim();
@@ -804,28 +911,60 @@ async function startChatWithUser(user) {
             { participants: [user.username] }
         );
 
-        if (!response.ok) {
-            throw new Error('채팅방 생성에 실패했습니다.');
+        // 응답 형식 확인
+        const contentType = response.headers.get("content-type");
+        let responseData;
+        
+        if (contentType && contentType.includes("application/json")) {
+            responseData = await response.json();
+        } else {
+            // JSON이 아닌 경우 텍스트로 읽기
+            const textResponse = await response.text();
+            console.error('Non-JSON response:', textResponse);
+            throw new Error('서버 응답이 올바르지 않습니다');
         }
 
-        const newChatRoom = await response.json();
-        
-        if (newChatRoom && newChatRoom.id) {
-            // 검색 결과 숨기기 및 입력 필드 초기화
+        console.log('Chat room creation response:', response.status, responseData);
+
+        if (response.status === 400) {
+            if (responseData.detail === "이미 이 사용자와의 채팅방이 존재합니다.") {
+                // 이미 존재하는 채팅방 처리
+                await getChatRooms();
+                
+                const chatRooms = document.querySelectorAll('#chat-list ul li');
+                for (const room of chatRooms) {
+                    const usernameElement = room.querySelector('h6');
+                    if (usernameElement && usernameElement.textContent === user.username) {
+                        const chatLink = room.querySelector('a');
+                        if (chatLink) {
+                            const roomId = chatLink.getAttribute('href').replace('#chat-', '');
+                            openChatRoom(roomId);
+                            document.getElementById('searchResults').style.display = 'none';
+                            document.getElementById('userSearchInput').value = '';
+                            return;
+                        }
+                    }
+                }
+            }
+            throw new Error(responseData.detail || '채팅방 생성에 실패했습니다.');
+        }
+
+        if (!response.ok) {
+            throw new Error(responseData.detail || '채팅방 생성에 실패했습니다.');
+        }
+
+        // 정상적으로 새 채팅방이 생성된 경우
+        if (responseData && responseData.id) {
             document.getElementById('searchResults').style.display = 'none';
             document.getElementById('userSearchInput').value = '';
-            
-            // 페이지 새로고침 전에 채팅방 ID를 localStorage에 저장
-            localStorage.setItem('lastCreatedChatRoomId', newChatRoom.id);
-            
-            // 페이지 새로고침
+            localStorage.setItem('lastCreatedChatRoomId', responseData.id);
             window.location.reload();
         } else {
-            throw new Error('Invalid chat room data');
+            throw new Error('올바르지 않은 채팅방 데이터입니다.');
         }
     } catch (error) {
         console.error('Error starting chat:', error);
-        showErrorMessage('채팅방 생성 중 오류가 발생했습니다.');
+        showErrorMessage(error.message || '채팅방 생성 중 오류가 발생했습니다.');
     }
 }
 
